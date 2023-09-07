@@ -1,0 +1,17 @@
+[1:11 PM] Shawn Kshatriya
+
+[sapdb].[sap].[ZTFTP_ZTPOP_ProductionScheduleDetail]
+
+[1:11 PM] Shawn Kshatriya
+
+connects index to RE SN
+
+[1:11 PM] Shawn Kshatriya
+
+then we need to use [ZTFTP_ZTPOK_ProductionScheduleHeader]
+
+ like 1
+
+[1:11 PM] Shawn Kshatriya
+
+to connect index to add type and status

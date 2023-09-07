@@ -1,0 +1,26 @@
+SELECT * FROM
+(
+SELECT DISTINCT SerialNumber
+        ,[CheckPointName]
+      ,[SKU]
+      ,[TransactionDate]
+      ,[StockCode]
+      ,[Site]
+
+ 
+
+ 
+
+  FROM [ASBuiltDW].[dbo].[producthistory]
+    WHERE CheckPointName IN ('Server Initialization','Server Assembly Finish') and [Site] = 'NJ'
+
+)AS PH
+            PIVOT (
+                    MAX([TransactionDate]) 
+                    FOR [CheckPointName] 
+                        IN ([Server Initialization], [Server Assembly Finish] )
+                    ) AS PVT
+WHERE [Server Initialization] is not null
+and [Server Assembly Finish] is null
+and [Server Initialization] > '2023-06-01'
+--and StockCode = 'RE-04165-001'
