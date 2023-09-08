@@ -323,9 +323,10 @@ def assign_shipmentStatus(db_conn):
 
     # Find the units that do not have Shipping Scan (for rack shipment) nor Carton Scan (for single servers)
     for serialNumber, wipHistory_df in tqdm(wip_grouped, desc="Assigning Shipment Status"):
+        wipHistory_df = wipHistory_df.sort_values('WIP_SnapshotDate', ascending=False)
         max_ckp = wipHistory_df['CheckpointID'].iloc[0]
-        max_timestamp = wipHistory_df['TransactionDate'].iloc[0]
-        instance_upper_boundary = wipHistory_df['WIP_SnapshotDate'].iloc[0]
+        max_timestamp = wipHistory_df['TransactionDate'].max(skipna=True)
+        instance_upper_boundary = wipHistory_df['WIP_SnapshotDate'].max(skipna=True)
 
         if max_ckp in criticalShipment_ckps:
             wip_shipped_instance = (serialNumber, False)

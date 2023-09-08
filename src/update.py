@@ -27,6 +27,10 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
     if to_csv:  # Save a CSV file of the updated WIP data
         print("Creating updated WIP .csv files in the background...")
         wip_updated[0].to_csv("../CleanedRecords_csv/wip_updatedShipped.csv", index=False)
+
+        wip_updated[1]['DwellTime_calendar'] =\
+            wip_updated[1]['DwellTime_calendar'].apply(lambda row: format(row, '.9f'))
+        wip_updated[1]['DwellTime_working'] = wip_updated[1]['DwellTime_working'].apply(lambda row: format(row, '.9f'))
         wip_updated[1].to_csv("../CleanedRecords_csv/wip_updatedNotShipped.csv", index=False)
         print("CSV files for updated WIP created successfully\n")
     else:

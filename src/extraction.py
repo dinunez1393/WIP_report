@@ -271,7 +271,7 @@ def select_wip_maxStatus(db_conn, isForUpdate=True):
     :param db_conn: The connection to the database
     :param isForUpdate: Flag that indicates if the result of the query will be used to update the WIP table or not
     :return: A dataframe containing the WIP data of distinct units that have not shipped
-    ":rtype: pandas.Dataframe
+    :rtype: pandas.Dataframe
     """
     query = f"""
         WITH maxTransT_CTE AS (
