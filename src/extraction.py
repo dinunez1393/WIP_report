@@ -274,16 +274,37 @@ def select_wip_maxStatus(db_conn, isForUpdate=True):
     :rtype: pandas.Dataframe
     """
     query = f"""
+        --SELECTS All the MAX SN, TransactionDate pairs that have a NotShipped status flag = True
         WITH maxTransT_CTE AS (
             SELECT SerialNumber, MAX([TransactionDate]) AS MaxTransactionDate
             FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
             {'' if isForUpdate else '--'}WHERE [NotShippedTransaction_flag] = 1
             GROUP BY SerialNumber
         )
-        SELECT wip.*
-        FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS wip
-        INNER JOIN maxTransT_CTE AS wipMax
-        ON wip.SerialNumber = wipMax.SerialNumber AND wip.[TransactionDate] = wipMax.MaxTransactionDate;
+        --SELECTS All Columns of all units MAX transaction date that have a NotShipped status flag = True
+        {'' if isForUpdate else '--'},notShipped_CTE AS (
+            SELECT wip.{'SerialNumber' if isForUpdate else '*'}
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS wip
+            INNER JOIN maxTransT_CTE AS wipMax
+            ON wip.SerialNumber = wipMax.SerialNumber AND wip.[TransactionDate] = wipMax.MaxTransactionDate
+        {'' if isForUpdate else '--'})
+        {'' if isForUpdate else '/*'}
+        --SELECTS All columns from the entire WIP table of SNs that match the previous query
+        ,allWip_CTE AS (
+            SELECT *
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
+            WHERE SerialNumber IN (SELECT * FROM notShipped_CTE)
+        )
+        ,maxTransT2_CTE AS ( -- SELECTS All MAX SN, Transaction Date pairs from the previous query
+            SELECT SerialNumber, MAX([TransactionDate]) AS MaxTransactionDate
+            FROM allWip_CTE
+            GROUP BY SerialNumber
+        )
+        SELECT t1.*  -- SELECTS All columns of all units MAX transaction date from the previous query
+        FROM allWip_CTE AS t1
+        INNER JOIN maxTransT2_CTE AS t2
+        ON t1.SerialNumber = t2.SerialNumber AND t1.TransactionDate = t2.MaxTransactionDate;
+        {'' if isForUpdate else '*/'}
     """
     try:
         print(f"SELECT process for WIP data of distinct units {'that have not shipped ' if isForUpdate else ''}"
