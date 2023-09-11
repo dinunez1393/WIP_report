@@ -56,7 +56,7 @@ class ServerHistory:
 
             # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
             # to the minium timestamp for existing WIP
-            if 7131993 in starterCkps_df['isFrom_WIP']:
+            if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
                 current_date = fixed_date(min_timestamp) + timedelta(days=1)
             else:
                 current_date = fixed_date(min_timestamp)
@@ -138,7 +138,7 @@ class RackHistory:
 
             # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
             # to the minium timestamp for existing WIP
-            if 7131993 in starterCkps_df['isFrom_WIP']:
+            if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
                 current_date = fixed_date(min_timestamp) + timedelta(days=1)
             else:
                 current_date = fixed_date(min_timestamp)

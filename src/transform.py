@@ -213,7 +213,7 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
                                                                 'TransactionID': 'TransID',
                                                                 'WIP_SnapshotDate': 'SnapshotTime',
                                                                 'ExtractionDate': 'ETL_time'})
-    latest_wip_status_df['isFrom_WIP'] = 7131993
+    latest_wip_status_df['isFrom_WIP'] = 'isFrom_WIP'
 
     # Reindex the raw data and concatenate with existing data from WIP table
     rawData_df = rawData_df.reindex(columns=wip_columns)
@@ -282,15 +282,16 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
     # Drop the temporary column 'isFrom_WIP'
     wip_df = wip_df.drop(columns=['isFrom_WIP'])
     # Dwell time calculation
-    wip_df['DwellTime_calendar'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                                row['SnapshotTime']), axis=1)
-    wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                               row['SnapshotTime'], calendar=False),
-                                               axis=1)
-    # Convert python Datetime(s) to SQL Datetime
-    wip_df['TransactionDate'] = wip_df['TransactionDate'].apply(datetime_from_py_to_sql)
-    wip_df['SnapshotTime'] = wip_df['SnapshotTime'].apply(datetime_from_py_to_sql)
-    wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
+    if wip_df.shape[0] > 0:
+        wip_df['DwellTime_calendar'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
+                                                                                    row['SnapshotTime']), axis=1)
+        wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
+                                                                                   row['SnapshotTime'], calendar=False),
+                                                   axis=1)
+        # Convert python Datetime(s) to SQL Datetime
+        wip_df['TransactionDate'] = wip_df['TransactionDate'].apply(datetime_from_py_to_sql)
+        wip_df['SnapshotTime'] = wip_df['SnapshotTime'].apply(datetime_from_py_to_sql)
+        wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
 
     print(f"Cleaned WIP data allocation completed successfully in {dt.now() - allocation_start}\n")
 
