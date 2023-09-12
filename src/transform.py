@@ -305,7 +305,7 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
             wip_df['TransactionDate'] = wip_df['TransactionDate'].apply(datetime_from_py_to_sql)
             wip_df['SnapshotTime'] = wip_df['SnapshotTime'].apply(datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
-            wip_dfs_list.append(wip_df)
+            wip_dfs_list.append(wip_df.copy())
 
     if len(wip_dfs_list) < 1:
         final_wip_df = pd.DataFrame([], columns=wip_columns)  # Dummy DF to avoid producing an error
