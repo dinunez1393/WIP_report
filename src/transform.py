@@ -361,4 +361,14 @@ def assign_shipmentStatus(db_conn):
     wip_stillNotShipped_df['WIP_SnapshotDate'] = \
         wip_stillNotShipped_df['WIP_SnapshotDate'].apply(datetime_from_py_to_sql)
 
-    return wip_shipped_df, wip_stillNotShipped_df
+    # Create a dataframe containing only the necessary SNs from wip_stillNotShipped_df that needs update on SQL
+    grouped_notShipped = wip_stillNotShipped_df.groupby('SerialNumber')
+    unshipped_toUpdate = set()
+    for serialNumber, notShipped_df in tqdm(grouped_notShipped, desc="Assessing unshipped Serial Numbers to update"):
+        if notShipped_df['NotShippedTransaction_flag'].all():
+            continue
+        unshipped_toUpdate.add(serialNumber)
+
+    unshipped_toUpdate_df = pd.DataFrame(unshipped_toUpdate, columns=['SerialNumber'])
+
+    return wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df

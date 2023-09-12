@@ -28,9 +28,6 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
         print("Creating updated WIP .csv files in the background...")
         wip_updated[0].to_csv("../CleanedRecords_csv/wip_updatedShipped.csv", index=False)
 
-        wip_updated[1]['DwellTime_calendar'] =\
-            wip_updated[1]['DwellTime_calendar'].apply(lambda row: format(row, '.9f'))
-        wip_updated[1]['DwellTime_working'] = wip_updated[1]['DwellTime_working'].apply(lambda row: format(row, '.9f'))
         wip_updated[1].to_csv("../CleanedRecords_csv/wip_updatedNotShipped.csv", index=False)
         print("CSV files for updated WIP created successfully\n")
     else:
@@ -39,9 +36,9 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
         else:
             wip_shipped_list = []
         if wip_updated[1].shape[0] > 0:
-            wip_notShipped_list = list(wip_updated[1]['SerialNumber'].unique())
+            wip_notShipped_set = set(wip_updated[1]['SerialNumber'])
         else:
-            wip_notShipped_list = []
+            wip_notShipped_set = []
 
         update_shipped_query = """
             UPDATE [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
@@ -55,7 +52,7 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
                     [LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
                 WHERE [SerialNumber] = ?
         """
-        if len(wip_shipped_list) > 0 or len(wip_notShipped_list) > 0:
+        if len(wip_shipped_list) > 0 or len(wip_notShipped_set) > 0:
             try:
                 with db_conn.cursor() as cursor:
                     if len(wip_shipped_list) > 0:
@@ -64,10 +61,10 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
                             cursor.execute(update_shipped_query, wip_instance)
                     else:
                         print("No new records to UPDATE for shipped units\n")
-                    if len(wip_notShipped_list) > 0:
-                        for wip_instance in tqdm(wip_notShipped_list, total=len(wip_notShipped_list),
+                    if len(wip_notShipped_set) > 0:
+                        for serialNumber in tqdm(wip_notShipped_set, total=len(wip_notShipped_set),
                                                  desc="UPDATING WIP shipment flag for not shipped units"):
-                            cursor.execute(update_notShipped_query, wip_instance)
+                            cursor.execute(update_notShipped_query, serialNumber)
                     else:
                         print("No new records to UPDATE for not shipped units\n")
             except Exception as e:

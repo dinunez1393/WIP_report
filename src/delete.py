@@ -21,7 +21,7 @@ def delete_oldData(db_conn):
     print("Deleting old data...")
     query = """
         DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
-        WHERE [WIP_SnapshotDate] < DATEADD(DAY, -185, GETDATE());
+        WHERE [WIP_SnapshotDate] < DATEADD(DAY, -200, GETDATE());
     """
 
     try:
