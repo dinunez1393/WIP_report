@@ -312,7 +312,8 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
     else:
         print(f"Concatenating the {'SR' if isServerLevel else 'RE'} dataframes in the background...")
         final_wip_df = pd.concat(wip_dfs_list, ignore_index=True)
-    print(f"Cleaned WIP data allocation completed successfully in {dt.now() - allocation_start}\n")
+    print(f"Cleaned {'SR' if isServerLevel else 'RE'} WIP data allocation completed successfully in "
+          f"{dt.now() - allocation_start}\n")
 
     # Store results
     if isServerLevel:
