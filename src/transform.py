@@ -197,6 +197,7 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
     cleaning_start = dt.now()
     counter = 0
     wip_list = []
+    master_list = []
     wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'SKU', 'CheckPointId',
                    'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
@@ -228,11 +229,17 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
         for serialNumber, ph_instance_df in tqdm(ph_instances_grouped, desc="SR WIP cleaning operation progress"):
             cleaned_wip = ServerHistory(ph_instance_df.reset_index(drop=True))
             wip_list.extend(cleaned_wip.determine_processAndArea())
+            if len(wip_list) > 1_000_000:
+                master_list.append(wip_list.copy())
+                wip_list.clear()
     else:  # Cleaning for Rack Level WIP
         print("RE WIP cleaning operation is running on the background. Progress will show intermittently")
         for serialNumber, ph_instance_df in ph_instances_grouped:
             cleaned_wip = RackHistory(ph_instance_df.reset_index(drop=True))
             wip_list.extend(cleaned_wip.determine_processAndArea())
+            if len(wip_list) > 1_000_000:
+                master_list.append(wip_list.copy())
+                wip_list.clear()
 
             # Provide loop progress feedback for 5%, 10%, 20%, 25%, 30%, 40%, 50%, 60%, 75%, 80%, 90%, and 95%
             counter += 1
@@ -277,29 +284,41 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
 
     # Convert WIP list to a dataframe
     allocation_start = dt.now()
-    print("Allocating the cleaned WIP data in the background...")
-    wip_df = pd.DataFrame(wip_list, columns=wip_columns)
-    # Drop the temporary column 'isFrom_WIP'
-    wip_df = wip_df.drop(columns=['isFrom_WIP'])
-    # Dwell time calculation
-    if wip_df.shape[0] > 0:
-        wip_df['DwellTime_calendar'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                                    row['SnapshotTime']), axis=1)
-        wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                                   row['SnapshotTime'], calendar=False),
-                                                   axis=1)
-        # Convert python Datetime(s) to SQL Datetime
-        wip_df['TransactionDate'] = wip_df['TransactionDate'].apply(datetime_from_py_to_sql)
-        wip_df['SnapshotTime'] = wip_df['SnapshotTime'].apply(datetime_from_py_to_sql)
-        wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
+    if len(wip_list) <= 1_000_000:  # Still append for wip_list less than 1 million
+        master_list.append(wip_list.copy())
+        wip_list.clear()
+    wip_dfs_list = []
 
+    for wip_list in tqdm(master_list, total=len(master_list), desc=f"Allocating the cleaned "
+                                                                   f"{'SR' if isServerLevel else 'RE'} WIP data"):
+        wip_df = pd.DataFrame(wip_list, columns=wip_columns)
+        # Drop the temporary column 'isFrom_WIP'
+        wip_df = wip_df.drop(columns=['isFrom_WIP'])
+        # Dwell time calculation
+        if wip_df.shape[0] > 0:
+            wip_df['DwellTime_calendar'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
+                                                                                        row['SnapshotTime']), axis=1)
+            wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
+                                                                                       row['SnapshotTime'],
+                                                                                       calendar=False), axis=1)
+            # Convert python Datetime(s) to SQL Datetime
+            wip_df['TransactionDate'] = wip_df['TransactionDate'].apply(datetime_from_py_to_sql)
+            wip_df['SnapshotTime'] = wip_df['SnapshotTime'].apply(datetime_from_py_to_sql)
+            wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
+            wip_dfs_list.append(wip_df)
+
+    if len(wip_dfs_list) < 1:
+        final_wip_df = pd.DataFrame([], columns=wip_columns)  # Dummy DF to avoid producing an error
+    else:
+        print(f"Concatenating the {'SR' if isServerLevel else 'RE'} dataframes in the background...")
+        final_wip_df = pd.concat(wip_dfs_list, ignore_index=True)
     print(f"Cleaned WIP data allocation completed successfully in {dt.now() - allocation_start}\n")
 
     # Store results
     if isServerLevel:
-        result_store[0] = wip_df
+        result_store[0] = final_wip_df
     else:
-        result_store[1] = wip_df
+        result_store[1] = final_wip_df
 
 
 def assign_shipmentStatus(db_conn):

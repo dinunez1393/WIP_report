@@ -89,12 +89,12 @@ if __name__ == '__main__':
         load_wip_data(conn_sbi, sr_wip_df, to_csv=True)
         load_wip_data(conn_sbi, re_wip_df, to_csv=True, isServer=False)
 
-        # Update the shipment status from WIP table
-        wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df = assign_shipmentStatus(conn_sbi)
-
-        # Post the update to SQL
-        update_wip_data(conn_sbi, [wip_shipped_df, unshipped_toUpdate_df], to_csv=True)
-        load_wip_data(conn_sbi, wip_stillNotShipped_df, to_csv=True)
+        # # Update the shipment status from WIP table
+        # wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df = assign_shipmentStatus(conn_sbi)
+        #
+        # # Post the update to SQL
+        # update_wip_data(conn_sbi, [wip_shipped_df, unshipped_toUpdate_df], to_csv=True)
+        # load_wip_data(conn_sbi, wip_stillNotShipped_df, to_csv=True)
     except Exception as e:
         print(repr(e))
         LOGGER.error(GENERIC_ERROR, exc_info=True)
