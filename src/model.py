@@ -12,9 +12,9 @@ class ServerHistory:
     def __init__(self, sr_checkpoints_df):
         self.sr_checkpoints_df = sr_checkpoints_df
         self.shipmentCkps = {300, 301, 302}
-        self.criticalCkps = {100, 200, 235, 254, 208, 252, 150, 170, 216, 218, 260, 243, 2470, 228, 270, 230, 300, 301,
-                             1510, 234, 302}
-        self.areas = {'Server Build': [100],
+        self.criticalCkps = {100, 101, 200, 235, 254, 208, 252, 150, 170, 216, 218, 260, 243, 2470, 228, 270, 230, 300,
+                             301, 1510, 234, 302}
+        self.areas = {'Server Build': [100, 101],
                       'Rack Build': [200, 235, 254, 208, 252],
                       'System Test': [150, 170],
                       'End of Line': [216, 218, 260, 202, 243, 2470, 228, 270, 237, 230, 300, 301, 1510, 234, 302]}
@@ -37,6 +37,9 @@ class ServerHistory:
             max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
             today_upperBoundary = fixed_date(dt.now())
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
+            minThreshold = dt.now() - timedelta(days=175)  # Use only for initial population of the SQL table
+
+            # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
                 # Add one day to the actual upper boundary if the max timestamp is less than today's upper boundary
                 # but the time portion of max timestamp is greater than the time portion of today's upper boundary. This
@@ -57,9 +60,18 @@ class ServerHistory:
             # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
             # to the minium timestamp for existing WIP
             if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
-                current_date = fixed_date(min_timestamp) + timedelta(days=1)
+                previousData_df = starterCkps_df[starterCkps_df['TransactionDate'] <= min_timestamp]
+                current_date = previousData_df['SnapshotTime'].max(skipna=True) + timedelta(days=1)
             else:
                 current_date = fixed_date(min_timestamp)
+
+            # Set usable data for very old instances  # Use only for initial population of the SQL table
+            if min_timestamp < minThreshold:
+                if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
+                    if max_timestamp < minThreshold:  # Void very old instances that already shipped
+                        return []
+                else:
+                    current_date = fixed_date(minThreshold)
 
             # Iterate between the boundaries to find the location (process and area) of this server for each day
             while current_date <= actual_upperBoundary:
@@ -119,6 +131,9 @@ class RackHistory:
             max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
             today_upperBoundary = fixed_date(dt.now())
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
+            minThreshold = dt.now() - timedelta(days=175)  # Use only for initial population of the SQL table
+
+            # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
                 # Add one day to the actual upper boundary if the max timestamp is less than today's upper boundary
                 # but the time portion of max timestamp is greater than the time portion of today's upper boundary. This
@@ -139,9 +154,18 @@ class RackHistory:
             # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
             # to the minium timestamp for existing WIP
             if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
-                current_date = fixed_date(min_timestamp) + timedelta(days=1)
+                previousData_df = starterCkps_df[starterCkps_df['TransactionDate'] <= min_timestamp]
+                current_date = previousData_df['SnapshotTime'].max(skipna=True) + timedelta(days=1)
             else:
                 current_date = fixed_date(min_timestamp)
+
+            # Set usable data for very old instances  # Use only for initial population of the SQL table
+            if min_timestamp < minThreshold:
+                if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
+                    if max_timestamp < minThreshold:  # Void very old instances that already shipped
+                        return []
+                else:
+                    current_date = fixed_date(minThreshold)
 
             # Iterate between the boundaries to find the location (process and area) of this rack for each day
             while current_date <= actual_upperBoundary:

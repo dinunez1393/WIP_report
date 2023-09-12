@@ -10,7 +10,7 @@ SQL_Q_ERROR = "An SQL SELECT statement error occurred"
 if dt.now().date() == date(2023, 9, 5):
     DATE_THRESHOLD = dt(2023, 8, 15, 0, 0)
 else:  # Normal runs
-    DATE_THRESHOLD = dt.now() - timedelta(days=175)
+    DATE_THRESHOLD = dt.now() - timedelta(days=549)
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.ERROR)
