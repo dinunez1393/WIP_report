@@ -89,6 +89,7 @@ class ServerHistory:
                         location_row['Area'] = area
                         break
                 location_row['SnapshotTime'] = current_date
+                # Dwell time calculation
                 location_row['DwellTime_calendar'] = delta_working_hours(location_row['TransactionDate'], current_date)
                 location_row['DwellTime_working'] = delta_working_hours(location_row['TransactionDate'], current_date,
                                                                         calendar=False)
@@ -186,6 +187,7 @@ class RackHistory:
                         location_row['Area'] = area
                         break
                 location_row['SnapshotTime'] = current_date
+                # Dwell time calculation
                 location_row['DwellTime_calendar'] = delta_working_hours(location_row['TransactionDate'], current_date)
                 location_row['DwellTime_working'] = delta_working_hours(location_row['TransactionDate'], current_date,
                                                                         calendar=False)

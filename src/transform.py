@@ -294,7 +294,7 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
         wip_df = pd.DataFrame(wip_list, columns=wip_columns)
         # Drop the temporary column 'isFrom_WIP'
         wip_df = wip_df.drop(columns=['isFrom_WIP'])
-        # Dwell time calculation
+        # Datetime to string conversion
         if wip_df.shape[0] > 0:
             # Convert python Datetime(s) to SQL Datetime
             wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
