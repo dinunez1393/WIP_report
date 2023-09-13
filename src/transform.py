@@ -306,6 +306,7 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
         # Datetime to string conversion
         if wip_df.shape[0] > 0:
             # Dwell time calculations
+            print(f"{wip_df.shape[0]:,} items in {'SR' if isServerLevel else 'RE'} WIP dataframe ({index + 1})")
             time_tracker = dt.now()
             wip_df['DwellTime_calendar'] = wip_df['SnapshotTime'] - wip_df['TransactionDate']
             wip_df['DwellTime_calendar'] = wip_df['DwellTime_calendar'].dt.total_seconds()
@@ -324,8 +325,8 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
             wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
                 datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
-            logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} WIP: Datetime conversions to string complete. "
-                        f"T: {dt.now() - time_tracker}")
+            logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} WIP: Datetime conversions to string complete."
+                        f" T: {dt.now() - time_tracker}")
             wip_dfs_list.append(wip_df.copy())
 
     if len(wip_dfs_list) < 1:
@@ -398,7 +399,8 @@ def assign_shipmentStatus(db_conn):
     # Create the WIP not-shipped dataframe
     wip_stillNotShipped_df = pd.DataFrame(wip_stillNotShipped_tuples, columns=wip_df_columns)
     wip_stillNotShipped_df['ExtractionDate'] = datetime_from_py_to_sql(dt.now())
-    wip_stillNotShipped_df['TransactionDate'] = wip_stillNotShipped_df['TransactionDate'].applymap(datetime_from_py_to_sql)
+    wip_stillNotShipped_df['TransactionDate'] = \
+        wip_stillNotShipped_df['TransactionDate'].applymap(datetime_from_py_to_sql)
     wip_stillNotShipped_df['WIP_SnapshotDate'] = \
         wip_stillNotShipped_df['WIP_SnapshotDate'].applymap(datetime_from_py_to_sql)
 
