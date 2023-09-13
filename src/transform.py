@@ -296,6 +296,13 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
         wip_df = wip_df.drop(columns=['isFrom_WIP'])
         # Datetime to string conversion
         if wip_df.shape[0] > 0:
+            # Dwell time calculations
+            wip_df['DwellTime_calendar'] = wip_df['SnapshotTime'] - wip_df['TransactionDate']
+            wip_df['DwellTime_calendar'] = wip_df['DwellTime_calendar'].dt.total_seconds()
+            wip_df['DwellTime_calendar'] /= 3600
+            wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
+                                                                                       row['SnapshotTime'],
+                                                                                       calendar=False), axis=1)
             # Convert python Datetime(s) to SQL Datetime
             wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
                 datetime_from_py_to_sql)
