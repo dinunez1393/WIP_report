@@ -310,7 +310,9 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
             wip_df['DwellTime_calendar'] = wip_df['SnapshotTime'] - wip_df['TransactionDate']
             wip_df['DwellTime_calendar'] = wip_df['DwellTime_calendar'].dt.total_seconds()
             wip_df['DwellTime_calendar'] /= 3600
-            logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} WIP: Calendar dwell time calculations complete")
+            logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} "
+                        f"WIP: Calendar dwell time calculations complete. T: {dt.now() - time_tracker}")
+            time_tracker = dt.now()
             wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
                                                                                        row['SnapshotTime'],
                                                                                        calendar=False), axis=1)
