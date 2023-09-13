@@ -5,6 +5,7 @@ from extraction import *
 from utilities import *
 from tqdm import tqdm
 import asyncio
+import logging
 from datetime import datetime as dt
 
 
@@ -194,6 +195,10 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
     :return: full WIP report
     :rtype: pandas.Dataframe
     """
+    # Logger variables
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+
     cleaning_start = dt.now()
     counter = 0
     wip_list = []
@@ -294,19 +299,23 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
         wip_df = pd.DataFrame(wip_list, columns=wip_columns)
         # Drop the temporary column 'isFrom_WIP'
         wip_df = wip_df.drop(columns=['isFrom_WIP'])
+        logger.info(f"Initialized the {'SR' if isServerLevel else 'RE'} WIP dataframe from the tuples")
         # Datetime to string conversion
         if wip_df.shape[0] > 0:
             # Dwell time calculations
             wip_df['DwellTime_calendar'] = wip_df['SnapshotTime'] - wip_df['TransactionDate']
             wip_df['DwellTime_calendar'] = wip_df['DwellTime_calendar'].dt.total_seconds()
             wip_df['DwellTime_calendar'] /= 3600
+            logger.info(f"{'SR' if isServerLevel else 'RE'} WIP: Calendar dwell time calculations complete")
             wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
                                                                                        row['SnapshotTime'],
                                                                                        calendar=False), axis=1)
+            logger.info(f"{'SR' if isServerLevel else 'RE'} WIP: Working time dwell time calculations complete")
             # Convert python Datetime(s) to SQL Datetime
             wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
                 datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
+            logger.info(f"{'SR' if isServerLevel else 'RE'} WIP: Datetime conversions to string complete")
             wip_dfs_list.append(wip_df.copy())
 
     if len(wip_dfs_list) < 1:
