@@ -294,28 +294,36 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
         wip_list.clear()
     wip_dfs_list = []
 
-    for wip_list in tqdm(master_list, total=len(master_list), desc=f"Allocating the cleaned "
-                                                                   f"{'SR' if isServerLevel else 'RE'} WIP data"):
+    print(f"\nAllocating the cleaned {'SR' if isServerLevel else 'RE'} WIP data - {len(master_list)} items:\n")
+    for index, wip_list in enumerate(master_list):
+        time_tracker = dt.now()
         wip_df = pd.DataFrame(wip_list, columns=wip_columns)
         # Drop the temporary column 'isFrom_WIP'
         wip_df = wip_df.drop(columns=['isFrom_WIP'])
-        logger.info(f"Initialized the {'SR' if isServerLevel else 'RE'} WIP dataframe from the tuples")
+        logger.info(f"({index}) Initialized the {'SR' if isServerLevel else 'RE'} WIP dataframe from the tuples. "
+                    f"T: {dt.now() - time_tracker}")
+
         # Datetime to string conversion
         if wip_df.shape[0] > 0:
             # Dwell time calculations
+            time_tracker = dt.now()
             wip_df['DwellTime_calendar'] = wip_df['SnapshotTime'] - wip_df['TransactionDate']
             wip_df['DwellTime_calendar'] = wip_df['DwellTime_calendar'].dt.total_seconds()
             wip_df['DwellTime_calendar'] /= 3600
-            logger.info(f"{'SR' if isServerLevel else 'RE'} WIP: Calendar dwell time calculations complete")
+            logger.info(f"({index}) {'SR' if isServerLevel else 'RE'} WIP: Calendar dwell time calculations complete")
             wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
                                                                                        row['SnapshotTime'],
                                                                                        calendar=False), axis=1)
-            logger.info(f"{'SR' if isServerLevel else 'RE'} WIP: Working time dwell time calculations complete")
+            logger.info(f"({index}) {'SR' if isServerLevel else 'RE'} "
+                        f"WIP: Working time dwell time calculations complete. T: {dt.now() - time_tracker}")
+
             # Convert python Datetime(s) to SQL Datetime
+            time_tracker = dt.now()
             wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
                 datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
-            logger.info(f"{'SR' if isServerLevel else 'RE'} WIP: Datetime conversions to string complete")
+            logger.info(f"({index}) {'SR' if isServerLevel else 'RE'} WIP: Datetime conversions to string complete. "
+                        f"T: {dt.now() - time_tracker}")
             wip_dfs_list.append(wip_df.copy())
 
     if len(wip_dfs_list) < 1:
