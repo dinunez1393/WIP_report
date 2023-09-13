@@ -284,7 +284,7 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
 
     # Convert WIP list to a dataframe
     allocation_start = dt.now()
-    if len(wip_list) <= 1_000_000:  # Still append for wip_list less than 1 million
+    if 0 < len(wip_list) <= 1_000_000:  # Still append for wip_list less than 1 million
         master_list.append(wip_list.copy())
         wip_list.clear()
     wip_dfs_list = []
@@ -296,14 +296,9 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
         wip_df = wip_df.drop(columns=['isFrom_WIP'])
         # Dwell time calculation
         if wip_df.shape[0] > 0:
-            wip_df['DwellTime_calendar'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                                        row['SnapshotTime']), axis=1)
-            wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                                       row['SnapshotTime'],
-                                                                                       calendar=False), axis=1)
             # Convert python Datetime(s) to SQL Datetime
-            wip_df['TransactionDate'] = wip_df['TransactionDate'].apply(datetime_from_py_to_sql)
-            wip_df['SnapshotTime'] = wip_df['SnapshotTime'].apply(datetime_from_py_to_sql)
+            wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
+                datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
             wip_dfs_list.append(wip_df.copy())
 
@@ -377,9 +372,9 @@ def assign_shipmentStatus(db_conn):
     # Create the WIP not-shipped dataframe
     wip_stillNotShipped_df = pd.DataFrame(wip_stillNotShipped_tuples, columns=wip_df_columns)
     wip_stillNotShipped_df['ExtractionDate'] = datetime_from_py_to_sql(dt.now())
-    wip_stillNotShipped_df['TransactionDate'] = wip_stillNotShipped_df['TransactionDate'].apply(datetime_from_py_to_sql)
+    wip_stillNotShipped_df['TransactionDate'] = wip_stillNotShipped_df['TransactionDate'].applymap(datetime_from_py_to_sql)
     wip_stillNotShipped_df['WIP_SnapshotDate'] = \
-        wip_stillNotShipped_df['WIP_SnapshotDate'].apply(datetime_from_py_to_sql)
+        wip_stillNotShipped_df['WIP_SnapshotDate'].applymap(datetime_from_py_to_sql)
 
     # Create a dataframe containing only the necessary SNs from wip_stillNotShipped_df that needs update on SQL
     grouped_notShipped = wip_stillNotShipped_df.groupby('SerialNumber')

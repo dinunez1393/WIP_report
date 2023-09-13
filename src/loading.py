@@ -23,8 +23,8 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
     :return: None
     """
     if to_csv:  # Save a CSV file of the cleaned data
-        wip_df['DwellTime_calendar'] = wip_df['DwellTime_calendar'].apply(lambda row: format(row, '.9f'))
-        wip_df['DwellTime_working'] = wip_df['DwellTime_working'].apply(lambda row: format(row, '.9f'))
+        wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
+            ['DwellTime_calendar', 'DwellTime_working']].applymap(lambda x: format(x, '.9f'))
         if isServer:
             print("Creating SR WIP .csv file in the background...")
             wip_df.to_csv("../CleanedRecords_csv/wip_sr_records.csv", index=False)

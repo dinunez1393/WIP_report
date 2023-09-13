@@ -1,6 +1,6 @@
 # Classes
 import pandas as pd
-from utilities import fixed_date
+from utilities import fixed_date, delta_working_hours
 from datetime import datetime as dt, date, time, timedelta
 
 
@@ -89,6 +89,9 @@ class ServerHistory:
                         location_row['Area'] = area
                         break
                 location_row['SnapshotTime'] = current_date
+                location_row['DwellTime_calendar'] = delta_working_hours(location_row['TransactionDate'], current_date)
+                location_row['DwellTime_working'] = delta_working_hours(location_row['TransactionDate'], current_date,
+                                                                        calendar=False)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 # Add the WIP instance to the WIP history
@@ -183,6 +186,9 @@ class RackHistory:
                         location_row['Area'] = area
                         break
                 location_row['SnapshotTime'] = current_date
+                location_row['DwellTime_calendar'] = delta_working_hours(location_row['TransactionDate'], current_date)
+                location_row['DwellTime_working'] = delta_working_hours(location_row['TransactionDate'], current_date,
+                                                                        calendar=False)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 # Add the WIP instance to the WIP history
