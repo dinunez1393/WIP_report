@@ -2,7 +2,7 @@
 from tqdm import tqdm
 from alerts import *
 import pandas as pd
-from utilities import show_message, datetime_from_py_to_sql
+from utilities import show_message, datetime_from_py_to_sql, items_to_SQL_values
 import logging
 from datetime import datetime as dt
 
@@ -32,39 +32,63 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
         print("CSV files for updated WIP created successfully\n")
     else:
         if wip_updated[0].shape[0] > 0:
-            wip_shipped_list = [tuple(row) for _, row in wip_updated[0].iterrows()]
+            wip_shipped_set = set(wip_updated[0]['SerialNumber'])
         else:
-            wip_shipped_list = []
+            wip_shipped_set = []
         if wip_updated[1].shape[0] > 0:
             wip_notShipped_set = set(wip_updated[1]['SerialNumber'])
         else:
             wip_notShipped_set = []
 
-        update_shipped_query = """
-            UPDATE [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
-            SET [NotShippedTransaction_flag] = ?,
-                [LatestUpdateDate] = ?
-            WHERE [SerialNumber] = ?
+        update_shipped_query = f"""
+            WITH SerialNumber_CTE AS (
+                SELECT Value
+                FROM (
+                    VALUES
+                        {items_to_SQL_values(wip_shipped_set)}
+                ) AS Items(Value)
+            )
+        
+            UPDATE o
+            SET o.[NotShippedTransaction_flag] = 0,
+                o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS o
+            JOIN SerialNumber_CTE AS u
+            ON o.[SerialNumber] = u.[Value]
         """
+
         update_notShipped_query = f"""
-                UPDATE [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
-                SET [NotShippedTransaction_flag] = 1,
-                    [LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
-                WHERE [SerialNumber] = ?
+            WITH SerialNumber_CTE AS (
+                SELECT Value
+                FROM (
+                    VALUES
+                        {items_to_SQL_values(wip_notShipped_set)}
+                ) AS Items(Value)
+            )
+        
+            UPDATE o
+            SET o.[NotShippedTransaction_flag] = 1,
+                o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS o
+            JOIN SerialNumber_CTE AS u
+            ON o.[SerialNumber] = u.[Value]
         """
-        if len(wip_shipped_list) > 0 or len(wip_notShipped_set) > 0:
+        if len(wip_shipped_set) > 0 or len(wip_notShipped_set) > 0:
             try:
                 with db_conn.cursor() as cursor:
-                    if len(wip_shipped_list) > 0:
-                        for wip_instance in tqdm(wip_shipped_list, total=len(wip_shipped_list),
-                                                 desc="UPDATING WIP records for shipped units"):
-                            cursor.execute(update_shipped_query, wip_instance)
+                    if len(wip_shipped_set) > 0:
+                        update_start = dt.now()
+                        print("UPDATING WIP records for shipped units in the background...")
+                        cursor.execute(update_shipped_query)
+                        print(f"UPDATE for WIP shipped records is complete. T: {dt.now() - update_start}")
                     else:
                         print("No new records to UPDATE for shipped units\n")
+
                     if len(wip_notShipped_set) > 0:
-                        for serialNumber in tqdm(wip_notShipped_set, total=len(wip_notShipped_set),
-                                                 desc="UPDATING WIP shipment flag for not shipped units"):
-                            cursor.execute(update_notShipped_query, serialNumber)
+                        update_start = dt.now()
+                        print("UPDATING WIP shipment flag for not shipped units in the background...")
+                        cursor.execute(update_notShipped_query)
+                        print(f"UPDATE for WIP unshipped records is complete. T: {dt.now() - update_start}")
                     else:
                         print("No new records to UPDATE for not shipped units\n")
             except Exception as e:

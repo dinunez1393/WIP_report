@@ -361,7 +361,7 @@ def assign_shipmentStatus(db_conn):
 
     wip_grouped = wip_df.groupby('SerialNumber')
 
-    wip_shipped_tuples = []
+    wip_shipped_SNs = set()
     wip_stillNotShipped_tuples = []
 
     # Find the units that do not have Shipping Scan (for rack shipment) nor Carton Scan (for single servers)
@@ -372,8 +372,7 @@ def assign_shipmentStatus(db_conn):
         instance_upper_boundary = wipHistory_df['WIP_SnapshotDate'].max(skipna=True)
 
         if max_ckp in criticalShipment_ckps:
-            wip_shipped_instance = (serialNumber, False)
-            wip_shipped_tuples.append(wip_shipped_instance)
+            wip_shipped_SNs.add(serialNumber)
         else:
             # Add WIP for all days from the latest instance timestamp to current date (today)
             current_date = instance_upper_boundary + timedelta(days=1)
@@ -390,28 +389,16 @@ def assign_shipmentStatus(db_conn):
                 current_date = current_date + timedelta(days=1)
 
     # Create the WIP shipped dataframe
-    wip_shipped_df = pd.DataFrame(wip_shipped_tuples, columns=['SerialNumber', 'ShipmentStatus'])
-
-    # Add the latest update time and make necessary type conversions for SQL
-    wip_shipped_df['LatestUpdateTime'] = datetime_from_py_to_sql(dt.now())
-    wip_shipped_df = wip_shipped_df.reindex(columns=['ShipmentStatus', 'LatestUpdateTime', 'SerialNumber'])
+    wip_shipped_df = pd.DataFrame(wip_shipped_SNs, columns=['SerialNumber'])
 
     # Create the WIP not-shipped dataframe
     wip_stillNotShipped_df = pd.DataFrame(wip_stillNotShipped_tuples, columns=wip_df_columns)
     wip_stillNotShipped_df['ExtractionDate'] = datetime_from_py_to_sql(dt.now())
     wip_stillNotShipped_df['TransactionDate'] = \
-        wip_stillNotShipped_df['TransactionDate'].applymap(datetime_from_py_to_sql)
+        wip_stillNotShipped_df['TransactionDate'].apply(datetime_from_py_to_sql)
     wip_stillNotShipped_df['WIP_SnapshotDate'] = \
-        wip_stillNotShipped_df['WIP_SnapshotDate'].applymap(datetime_from_py_to_sql)
+        wip_stillNotShipped_df['WIP_SnapshotDate'].apply(datetime_from_py_to_sql)
 
-    # Create a dataframe containing only the necessary SNs from wip_stillNotShipped_df that needs update on SQL
-    grouped_notShipped = wip_stillNotShipped_df.groupby('SerialNumber')
-    unshipped_toUpdate = set()
-    for serialNumber, notShipped_df in tqdm(grouped_notShipped, desc="Assessing unshipped Serial Numbers to update"):
-        if notShipped_df['NotShippedTransaction_flag'].all():
-            continue
-        unshipped_toUpdate.add(serialNumber)
-
-    unshipped_toUpdate_df = pd.DataFrame(unshipped_toUpdate, columns=['SerialNumber'])
+    unshipped_toUpdate_df = pd.DataFrame(set(wip_stillNotShipped_df['SerialNumber']), columns=['SerialNumber'])
 
     return wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df

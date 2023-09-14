@@ -70,6 +70,8 @@ class ServerHistory:
                 if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
                     if max_timestamp < minThreshold:  # Void very old instances that already shipped
                         return []
+                    else:
+                        current_date = fixed_date(minThreshold)
                 else:
                     current_date = fixed_date(minThreshold)
 
@@ -164,6 +166,8 @@ class RackHistory:
                 if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
                     if max_timestamp < minThreshold:  # Void very old instances that already shipped
                         return []
+                    else:
+                        current_date = fixed_date(minThreshold)
                 else:
                     current_date = fixed_date(minThreshold)
 

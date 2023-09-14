@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import messagebox
 from alerts import *
 import time as ti
+from tqdm import tqdm
 
 
 def fixed_date(dayDateTime, fixedHour=9):
@@ -137,3 +138,17 @@ def str_extract_digits(str_input):
     """
     int_number = ''.join(filter(str.isdigit, str_input))
     return int(int_number)
+
+
+def items_to_SQL_values(collection):
+    """
+    Converts a collection of individual items into a collection of SQL values. It's useful for large UPDATE queries
+    :param collection: The collection to convert to SQL values collection
+    :return: The collection in SQL Values format
+    :rtype: str
+    """
+    sql_values = ["(" + "'" + item + "'" + ")" + "," for item in collection]
+    sql_values_str = ""
+    for item in tqdm(sql_values, total=len(sql_values), desc="Creating SQL Values list"):
+        sql_values_str += item
+    return sql_values_str[:-1]  # Omit the last comma
