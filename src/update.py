@@ -45,7 +45,7 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
                 SELECT Value
                 FROM (
                     VALUES
-                        {items_to_SQL_values(wip_shipped_set)}
+                        {items_to_SQL_values(collection=wip_shipped_set)}
                 ) AS Items(Value)
             )
         
@@ -62,7 +62,7 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
                 SELECT Value
                 FROM (
                     VALUES
-                        {items_to_SQL_values(wip_notShipped_set)}
+                        {items_to_SQL_values(collection=wip_notShipped_set)}
                 ) AS Items(Value)
             )
         

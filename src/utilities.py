@@ -140,15 +140,21 @@ def str_extract_digits(str_input):
     return int(int_number)
 
 
-def items_to_SQL_values(collection):
+def items_to_SQL_values(collection=None, isForUpdate=True, chunk_size=116):
     """
     Converts a collection of individual items into a collection of SQL values. It's useful for large UPDATE queries
     :param collection: The collection to convert to SQL values collection
+    :param isForUpdate: Flag that indicates if the return values would be for the UPDATE query
+    :param chunk_size: The size of the chunk for the INSERT query
     :return: The collection in SQL Values format
     :rtype: str
     """
-    sql_values = ["(" + "'" + item + "'" + ")" + "," for item in collection]
     sql_values_str = ""
-    for item in tqdm(sql_values, total=len(sql_values), desc="Creating SQL Values list"):
-        sql_values_str += item
+    if isForUpdate:  # Values for UPDATE query
+        sql_values = ["(" + "'" + item + "'" + ")" + "," for item in collection]
+        for item in tqdm(sql_values, total=len(sql_values), desc="Creating SQL Values list"):
+            sql_values_str += item
+    else:  # Placeholder values for INSERT query
+        for i in range(chunk_size):
+            sql_values_str += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?),"
     return sql_values_str[:-1]  # Omit the last comma
