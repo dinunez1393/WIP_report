@@ -89,7 +89,8 @@ if __name__ == '__main__':
         load_wip_data(conn_sbi, sr_wip_df, to_csv=False)
         load_wip_data(conn_sbi, re_wip_df, to_csv=False, isServer=False)
 
-        # Update the shipment status from WIP table
+        # Update the shipment status from WIP table - Comment out from here to end if it is the first run to populate
+        # SQL table
         wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df = assign_shipmentStatus(conn_sbi)
 
         # Post the update to SQL

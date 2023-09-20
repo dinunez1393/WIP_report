@@ -174,6 +174,7 @@ async def select_ph_rackBuildData(async_pool, date_threshold):
          LEFT JOIN [sapdb].[sap].[ZTPTP_SNSTATUS] AS sap_snStat
                ON ph.[SerialNumber] = sap_snStat.[SERIAL_NO_SerialNumberSFC]
          WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
+         AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
          AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
          AND ph.[StockCode] LIKE 'RE-%'
          AND CheckPointId IN (200, 235, 236,
@@ -239,6 +240,7 @@ async def select_ph_rackEoL_data(async_pool, date_threshold):
          LEFT JOIN [sapdb].[sap].[ZTPTP_SNSTATUS] AS sap_snStat
                ON ph.[SerialNumber] = sap_snStat.[SERIAL_NO_SerialNumberSFC]
          WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
+         AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
          AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
          AND ph.[StockCode] LIKE 'RE-%'
          AND CheckPointId IN (216, 217, 218, 219, 260);

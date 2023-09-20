@@ -34,8 +34,10 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     re_rackBuild_df = results[1]
     re_rackEoL_df = results[2]
 
-    # Purge End-of-Line and Rack Hi-Pot data that might be in server data to avoid having duplicates further on
-    mask = ~sr_rawData_df['CheckPointId'].isin({216, 217, 218, 219, 260, 2470, 247})
+    # Purge Rack Build, End-of-Line and Rack Hi-Pot data that might be in server data to avoid having
+    # duplicates further on
+    mask = ~sr_rawData_df['CheckPointId'].isin({200, 201, 235, 236, 254, 255, 208, 209, 252, 253,
+                                                216, 217, 218, 219, 260, 2470, 247})
     sr_rawData_df = sr_rawData_df[mask]
 
     # Merge rack build information for server:
