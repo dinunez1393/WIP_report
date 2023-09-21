@@ -140,7 +140,7 @@ def str_extract_digits(str_input):
     return int(int_number)
 
 
-def items_to_SQL_values(collection=None, isForUpdate=True, chunk_size=116):
+def items_to_SQL_values(collection, isForUpdate=True):
     """
     Converts a collection of individual items into a collection of SQL values. It's useful for large UPDATE queries
     :param collection: The collection to convert to SQL values collection
@@ -155,6 +155,7 @@ def items_to_SQL_values(collection=None, isForUpdate=True, chunk_size=116):
         for item in tqdm(sql_values, total=len(sql_values), desc="Creating SQL Values list"):
             sql_values_str += item
     else:  # Placeholder values for INSERT query
-        for i in range(chunk_size):
-            sql_values_str += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?),"
+        for item in collection:
+            sql_values_str += "('{}', '{}', '{}', '{}', '{}', {}, '{}', '{}', {}, '{}', '{}', {}, {}, " \
+                              "'{}', '{}', '{}', {}, {}, '{}'),".format(*item)
     return sql_values_str[:-1]  # Omit the last comma

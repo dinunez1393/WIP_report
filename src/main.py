@@ -4,7 +4,7 @@ from alerts import *
 from extraction import select_wip_maxStatus
 from loading import *
 from update import *
-from delete import delete_oldData
+from delete import *
 import warnings
 import pandas as pd
 from utilities import *
@@ -64,8 +64,8 @@ if __name__ == '__main__':
         # Supress all warning messages
         warnings.simplefilter("ignore")
 
-        # Delete oldest WIP data (older than 200 days)
-        delete_oldData(conn_sbi)
+        # Clear WIP table for fresh upload
+        delete_allData(conn_sbi)
 
         # Get all the raw data
         re_rawData_df, sr_rawData_df = asyncio.run(initializer(conn_sbi))
@@ -88,14 +88,17 @@ if __name__ == '__main__':
         re_wip_df = result_storage[1]
         load_wip_data(conn_sbi, sr_wip_df, to_csv=False)
         load_wip_data(conn_sbi, re_wip_df, to_csv=False, isServer=False)
+        # Update order type and factory status NULL values
+        update_orderType_factoryStatus(conn_sbi)
 
-        # Update the shipment status from WIP table - Comment out from here to end if it is the first run to populate
-        # SQL table
-        wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df = assign_shipmentStatus(conn_sbi)
-
-        # Post the update to SQL
-        update_wip_data(conn_sbi, [wip_shipped_df, unshipped_toUpdate_df], to_csv=False)
-        load_wip_data(conn_sbi, wip_stillNotShipped_df, to_csv=False)
+        # Disabled indefinitely
+        # # Update the shipment status from WIP table - Comment out from here to end if it is the first run to populate
+        # # SQL table
+        # wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df = assign_shipmentStatus(conn_sbi)
+        #
+        # # Post the update to SQL
+        # update_shipmentFlag(conn_sbi, [wip_shipped_df, unshipped_toUpdate_df], to_csv=False)
+        # load_wip_data(conn_sbi, wip_stillNotShipped_df, to_csv=False)
     except Exception as e:
         print(repr(e))
         LOGGER.error(GENERIC_ERROR, exc_info=True)

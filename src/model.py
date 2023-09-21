@@ -40,7 +40,10 @@ class ServerHistory:
             max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
             today_upperBoundary = fixed_date(dt.now())
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
-            # minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
+            minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
+
+            # Check if the unit has ever been packed
+            wasPacked = self.sr_checkpoints_df['CheckPointId'].isin(self.shipmentCkps).any()
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -68,15 +71,15 @@ class ServerHistory:
             else:
                 current_date = fixed_date(min_timestamp)
 
-            # # Set usable data for very old instances  # Use only for initial population of the SQL table
-            # if min_timestamp < minThreshold:
-            #     if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
-            #         if max_timestamp < minThreshold:  # Void very old instances that already shipped
-            #             return []
-            #         else:
-            #             current_date = fixed_date(minThreshold)
-            #     else:
-            #         current_date = fixed_date(minThreshold)
+            # Set usable data for very old instances  # Use only for initial population of the SQL table
+            if min_timestamp < minThreshold:
+                if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
+                    if max_timestamp < minThreshold:  # Void very old instances that already shipped
+                        return []
+                    else:
+                        current_date = fixed_date(minThreshold)
+                else:
+                    current_date = fixed_date(minThreshold)
 
             # Iterate between the boundaries to find the location (process and area) of this server for each day
             while current_date <= actual_upperBoundary:
@@ -96,6 +99,7 @@ class ServerHistory:
                 location_row['SnapshotTime'] = current_date
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
+                location_row['PackedPreviously_flag'] = wasPacked
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
                 wipHistory_tuples.append(location_row_tuple)
@@ -136,7 +140,10 @@ class RackHistory:
             max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
             today_upperBoundary = fixed_date(dt.now())
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
-            # minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
+            minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
+
+            # Check if the unit has ever been packed
+            wasPacked = self.re_checkpoints_df['CheckPointId'].isin(self.shipmentCkps).any()
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -164,15 +171,15 @@ class RackHistory:
             else:
                 current_date = fixed_date(min_timestamp)
 
-            # # Set usable data for very old instances  # Use only for initial population of the SQL table
-            # if min_timestamp < minThreshold:
-            #     if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
-            #         if max_timestamp < minThreshold:  # Void very old instances that already shipped
-            #             return []
-            #         else:
-            #             current_date = fixed_date(minThreshold)
-            #     else:
-            #         current_date = fixed_date(minThreshold)
+            # Set usable data for very old instances  # Use only for initial population of the SQL table
+            if min_timestamp < minThreshold:
+                if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
+                    if max_timestamp < minThreshold:  # Void very old instances that already shipped
+                        return []
+                    else:
+                        current_date = fixed_date(minThreshold)
+                else:
+                    current_date = fixed_date(minThreshold)
 
             # Iterate between the boundaries to find the location (process and area) of this rack for each day
             while current_date <= actual_upperBoundary:
@@ -192,6 +199,7 @@ class RackHistory:
                 location_row['SnapshotTime'] = current_date
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
+                location_row['PackedPreviously_flag'] = wasPacked
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
                 wipHistory_tuples.append(location_row_tuple)

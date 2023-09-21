@@ -6,7 +6,6 @@ from utilities import show_message, datetime_from_py_to_sql, items_to_SQL_values
 import logging
 from datetime import datetime as dt
 
-
 SUCCESS_OP = "The UPDATE operation completed successfully"
 SQL_U_ERROR = "There was an error in the UPDATE query"
 SUCCESS_MSG = "Number of raw objects cleaned: {0}. Number of new records updated: {1}"
@@ -14,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.ERROR)
 
 
-def update_wip_data(db_conn, wip_updated, to_csv=False):
+def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
     """
     Function to update the shipment status flag of the WIP records
     :param db_conn: the connection to the database
@@ -100,4 +99,38 @@ def update_wip_data(db_conn, wip_updated, to_csv=False):
                 print("\nUPDATE operation ran successfully\n")
         else:
             print("\nNo new records to UPDATE\n")
-                
+
+
+def update_orderType_factoryStatus(db_conn):
+    """
+    Function to update the columns [OrderType], [FactoryStatus] based if they have the string value 'NULL',
+    then set them to actual NULL
+    :param db_conn: the connection to the database
+    :return: None
+    """
+    update_query = """
+                UPDATE [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
+                SET [OrderType] =
+                    CASE
+                        WHEN [OrderType] = 'NULL'
+                        THEN NULL
+                        ELSE [OrderType]
+                    END
+                ,[FactoryStatus] =
+                    CASE
+                        WHEN [FactoryStatus] = 'NULL'
+                        THEN NULL
+                        ELSE [FactoryStatus]
+                    END;    
+    """
+    try:
+        with db_conn.cursor() as cursor:
+            print("Updating Order Type and Factory status NULL values in the background...")
+            cursor.execute(update_query)
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(SQL_U_ERROR, exc_info=True)
+        show_message(AlertType.FAILED)
+    else:
+        db_conn.commit()
+        print("\nUPDATE operation ran successfully\n")

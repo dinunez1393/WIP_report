@@ -208,7 +208,8 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
     wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'SKU', 'CheckPointId',
                    'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
-                   'ProductType', 'NotShippedTransaction_flag', 'ETL_time', 'isFrom_WIP']
+                   'ProductType', 'NotShippedTransaction_flag', 'PackedPreviously_flag',
+                   'ETL_time', 'isFrom_WIP']
     distinctSN_count = rawData_df['SerialNumber'].nunique()
 
     # Eliminate serial numbers from WIP table that do not match the newest raw extract

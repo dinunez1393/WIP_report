@@ -18,7 +18,6 @@ def delete_oldData(db_conn):
     :return: Nothing
     :rtype: None
     """
-    print("Deleting old data...")
     query = """
         DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
         WHERE [WIP_SnapshotDate] < DATEADD(DAY, -200, GETDATE());
@@ -26,6 +25,7 @@ def delete_oldData(db_conn):
 
     try:
         with db_conn.cursor() as cursor:
+            print("Deleting old data...")
             cursor.execute(query)
     except Exception as e:
         print(repr(e))
@@ -34,3 +34,24 @@ def delete_oldData(db_conn):
     else:
         db_conn.commit()
         print(f"WIP data prior to {dt.now() - timedelta(days=185)} has been deleted successfully\n")
+
+
+def delete_allData(db_conn):
+    """
+    Delete function truncates the WIP table
+    :param db_conn: The connection to the database
+    :return: None
+    """
+    query = "DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]";
+
+    try:
+        with db_conn.cursor() as cursor:
+            print("Deleting all data...")
+            cursor.execute(query)
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(SQL_D_ERROR, exc_info=True)
+        show_message(AlertType.FAILED)
+    else:
+        db_conn.commit()
+        print(f"WIP table has been cleared\n")
