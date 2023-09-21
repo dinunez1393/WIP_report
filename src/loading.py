@@ -8,7 +8,7 @@ from utilities import show_message, items_to_SQL_values
 
 SUCCESS_OP = "The INSERT operation completed successfully"
 SQL_I_ERROR = "There was an error in the INSERT query"
-CHUNK_SIZE = 116  # There are 18 parameters to insert per row. The SQL server only accepts a maximum of 2100 parameters
+CHUNK_SIZE = 116
 # 18 x 116 = 2088, which is close to the limit
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.ERROR)
@@ -69,6 +69,9 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                 big_chunk = False
 
             insert_query = """
+                    WITH wip_CTE AS (
+                        SELECT
+                    )
                     INSERT INTO [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] (
                         [Site]
                       ,[Building]

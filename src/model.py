@@ -4,6 +4,9 @@ from utilities import fixed_date, delta_working_hours
 from datetime import datetime as dt, date, time, timedelta
 
 
+DAYS_BACK = 120
+
+
 class ServerHistory:
     """
     Class represents an instance of a server and its checkpoints - data comes from product history
@@ -37,7 +40,7 @@ class ServerHistory:
             max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
             today_upperBoundary = fixed_date(dt.now())
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
-            # minThreshold = dt.now() - timedelta(days=175)  # Use only for initial population of the SQL table
+            # minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -133,7 +136,7 @@ class RackHistory:
             max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
             today_upperBoundary = fixed_date(dt.now())
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
-            # minThreshold = dt.now() - timedelta(days=175)  # Use only for initial population of the SQL table
+            # minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
