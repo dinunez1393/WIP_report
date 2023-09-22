@@ -63,14 +63,16 @@ class ServerHistory:
                 actual_upperBoundary = fixed_date(max_timestamp)
                 notShippedTransaction_flag = True
 
-            # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
-            # to the minium timestamp for existing WIP
-            if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
-                previousData_df = starterCkps_df[starterCkps_df['TransactionDate'] <= min_timestamp]
-                current_date = previousData_df['SnapshotTime'].max(skipna=True) + timedelta(days=1)
-            else:
-                current_date = fixed_date(min_timestamp)
+            # Disabled indefinitely
+            # # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
+            # # to the minium timestamp for existing WIP
+            # if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
+            #     previousData_df = starterCkps_df[starterCkps_df['TransactionDate'] <= min_timestamp]
+            #     current_date = previousData_df['SnapshotTime'].max(skipna=True) + timedelta(days=1)
+            # else:
+            #     current_date = fixed_date(min_timestamp)
 
+            current_date = fixed_date(min_timestamp)
             # Set usable data for very old instances  # Use only for initial population of the SQL table
             if min_timestamp < minThreshold:
                 if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -163,14 +165,16 @@ class RackHistory:
                 actual_upperBoundary = fixed_date(max_timestamp)
                 notShippedTransaction_flag = True
 
-            # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
-            # to the minium timestamp for existing WIP
-            if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
-                previousData_df = starterCkps_df[starterCkps_df['TransactionDate'] <= min_timestamp]
-                current_date = previousData_df['SnapshotTime'].max(skipna=True) + timedelta(days=1)
-            else:
-                current_date = fixed_date(min_timestamp)
+            # Disabled indefinitely
+            # # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
+            # # to the minium timestamp for existing WIP
+            # if 'isFrom_WIP' in set(starterCkps_df['isFrom_WIP']):
+            #     previousData_df = starterCkps_df[starterCkps_df['TransactionDate'] <= min_timestamp]
+            #     current_date = previousData_df['SnapshotTime'].max(skipna=True) + timedelta(days=1)
+            # else:
+            #     current_date = fixed_date(min_timestamp)
 
+            current_date = fixed_date(min_timestamp)
             # Set usable data for very old instances  # Use only for initial population of the SQL table
             if min_timestamp < minThreshold:
                 if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:

@@ -183,17 +183,17 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     return re_rawData_df, sr_rawData_df
 
 
-def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=True):
+def assign_wip(rawData_df, result_store, isServerLevel=True, latest_wip_status_df=None):
     """
     Function that cleans the processed raw data to make a full WIP report
     :param rawData_df: the dataframe containing the raw data
     :type rawData_df: pandas.Dataframe
-    :param latest_wip_status_df: a dataframe containing the serial numbers in WIP table with their respective MAX
-    snapshot time
-    :type latest_wip_status_df: pandas.Dataframe
     :param result_store: A list object for storing the cleaned results
     :type result_store: list
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
+    :param latest_wip_status_df: a dataframe containing the serial numbers in WIP table with their respective MAX
+    snapshot time - Disabled indefinitely
+    :type latest_wip_status_df: pandas.Dataframe
     :return: full WIP report
     :rtype: pandas.Dataframe
     """
@@ -209,24 +209,25 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
                    'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
                    'ProductType', 'NotShippedTransaction_flag', 'PackedPreviously_flag',
-                   'ETL_time', 'isFrom_WIP']
+                   'ETL_time']  # 'isFrom_WIP' - Disabled indefinitely
     distinctSN_count = rawData_df['SerialNumber'].nunique()
 
-    # Eliminate serial numbers from WIP table that do not match the newest raw extract
-    mask = latest_wip_status_df['SerialNumber'].isin(rawData_df['SerialNumber'])
-    latest_wip_status_df = latest_wip_status_df[mask]
-    latest_wip_status_df = latest_wip_status_df.drop(columns=['LatestUpdateDate'])
-    latest_wip_status_df = latest_wip_status_df.rename(columns={'CheckpointID': 'CheckPointId',
-                                                                'CheckpointName': 'CheckPointName',
-                                                                'ProcessArea': 'Area',
-                                                                'TransactionID': 'TransID',
-                                                                'WIP_SnapshotDate': 'SnapshotTime',
-                                                                'ExtractionDate': 'ETL_time'})
-    latest_wip_status_df['isFrom_WIP'] = 'isFrom_WIP'
+    # Disabled indefinitely
+    # # Eliminate serial numbers from WIP table that do not match the newest raw extract
+    # mask = latest_wip_status_df['SerialNumber'].isin(rawData_df['SerialNumber'])
+    # latest_wip_status_df = latest_wip_status_df[mask]
+    # latest_wip_status_df = latest_wip_status_df.drop(columns=['LatestUpdateDate'])
+    # latest_wip_status_df = latest_wip_status_df.rename(columns={'CheckpointID': 'CheckPointId',
+    #                                                             'CheckpointName': 'CheckPointName',
+    #                                                             'ProcessArea': 'Area',
+    #                                                             'TransactionID': 'TransID',
+    #                                                             'WIP_SnapshotDate': 'SnapshotTime',
+    #                                                             'ExtractionDate': 'ETL_time'})
+    # latest_wip_status_df['isFrom_WIP'] = 'isFrom_WIP'
 
     # Reindex the raw data and concatenate with existing data from WIP table
     rawData_df = rawData_df.reindex(columns=wip_columns)
-    rawData_df = pd.concat([rawData_df, latest_wip_status_df], ignore_index=True)
+    # rawData_df = pd.concat([rawData_df, latest_wip_status_df], ignore_index=True) - Disabled indefinitely
     ph_instances_grouped = rawData_df.groupby('SerialNumber')
 
     # Flags for process progress
@@ -301,8 +302,10 @@ def assign_wip(rawData_df, latest_wip_status_df, result_store, isServerLevel=Tru
     for index, wip_list in enumerate(master_list):
         time_tracker = dt.now()
         wip_df = pd.DataFrame(wip_list, columns=wip_columns)
-        # Drop the temporary column 'isFrom_WIP'
-        wip_df = wip_df.drop(columns=['isFrom_WIP'])
+
+        # Drop the temporary column 'isFrom_WIP' - Disabled indefinitely
+        # wip_df = wip_df.drop(columns=['isFrom_WIP'])
+
         logger.info(f"({index + 1}) Initialized the {'SR' if isServerLevel else 'RE'} WIP dataframe from the tuples. "
                     f"T: {dt.now() - time_tracker}")
 

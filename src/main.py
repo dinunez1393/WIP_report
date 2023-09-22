@@ -69,15 +69,14 @@ if __name__ == '__main__':
 
         # Get all the raw data
         re_rawData_df, sr_rawData_df = asyncio.run(initializer(conn_sbi))
-        # Get the latest WIP status to continue counting WIP from there
-        latest_wip_status_df = select_wip_maxStatus(conn_sbi, isForUpdate=False)
+
+        # Get the latest WIP status to continue counting WIP from there - Disabled indefinitely
+        # latest_wip_status_df = select_wip_maxStatus(conn_sbi, isForUpdate=False)
 
         # Clean the data in threads and make a WIP report
         result_storage = ['dummy_1', 'dummy_2']
-        thread_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df, latest_wip_status_df.copy(),
-                                                              result_storage))
-        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, latest_wip_status_df.copy(),
-                                                              result_storage, False))
+        thread_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df, result_storage))
+        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, result_storage, False))
         thread_sr.start()
         thread_re.start()
         thread_sr.join()
