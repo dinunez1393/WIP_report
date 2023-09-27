@@ -337,6 +337,7 @@ def assign_wip(rawData_df, result_store, isServerLevel=True, latest_wip_status_d
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
             logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} WIP: Datetime conversions to string complete."
                         f" T: {dt.now() - time_tracker}")
+
             wip_dfs_list.append(wip_df.copy())
 
     if len(wip_dfs_list) < 1:
