@@ -205,6 +205,10 @@ def assign_wip(rawData_df, result_store, isServerLevel=True, latest_wip_status_d
     counter = 0
     wip_list = []
     master_list = []
+    areas = {'Server Build': [100, 101],
+             'Rack Build': [200, 235, 254, 208, 252],
+             'System Test': [150, 170],
+             'End of Line': [216, 218, 260, 202, 243, 2470, 228, 270, 237, 230, 300, 301, 1510, 234, 302]}
     wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'SKU', 'CheckPointId',
                    'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
@@ -319,12 +323,12 @@ def assign_wip(rawData_df, result_store, isServerLevel=True, latest_wip_status_d
             wip_df['DwellTime_calendar'] /= 3600
             logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} "
                         f"WIP: Calendar dwell time calculations complete. T: {dt.now() - time_tracker}")
-            time_tracker = dt.now()
-            wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                                       row['SnapshotTime'],
-                                                                                       calendar=False), axis=1)
-            logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} "
-                        f"WIP: Working time dwell time calculations complete. T: {dt.now() - time_tracker}")
+
+            # Assign the process areas
+            for area, checkpoint_ids in tqdm(areas.items(), total=len(areas),
+                                             desc=f"({index + 1}) Assigning the "
+                                                  f"{'SR' if isServerLevel else 'RE'} process areas"):
+                wip_df.loc[wip_df['CheckPointId'].isin(checkpoint_ids), 'Area'] = area
 
             # Convert python Datetime(s) to SQL Datetime
             time_tracker = dt.now()

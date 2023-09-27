@@ -93,12 +93,10 @@ class ServerHistory:
                 # Get the row that has the current location of the server
                 location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
                                            day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
-                # Add the areas where the server is located for this date and also add the fixed current date as columns
-                for area, checkpoint_id in self.areas.items():
-                    if location_row['CheckPointId'] in checkpoint_id:
-                        location_row['Area'] = area
-                        break
+                # Calculate Working dwell time
+                transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
+                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 location_row['PackedPreviously_flag'] = wasPacked
@@ -195,12 +193,10 @@ class RackHistory:
                 # Get the row that has the current location of the rack
                 location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
                                            day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
-                # Add the areas where the rack is located for this date and also add the fixed current date as columns
-                for area, checkpoint_id in self.areas.items():
-                    if location_row['CheckPointId'] in checkpoint_id:
-                        location_row['Area'] = area
-                        break
+                # Calculate Working dwell time
+                transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
+                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 location_row['PackedPreviously_flag'] = wasPacked
