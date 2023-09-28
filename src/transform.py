@@ -260,42 +260,54 @@ def assign_wip(rawData_df, thread_lock, db_conn, isServerLevel=True, latest_wip_
             counter += 1
             current_progress = counter / distinctSN_count
             if ninety_5 and current_progress >= 0.95:
-                print(f"\nRE WIP cleaning operation at 95% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 95% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 ninety_5 = False
             elif ninety and current_progress >= 0.9:
-                print(f"\nRE WIP cleaning operation at 90% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 90% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 ninety = False
             elif dime_8 and current_progress >= 0.8:
-                print(f"\nRE WIP cleaning operation at 80% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 80% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 dime_8 = False
             elif quarter_3 and current_progress >= 0.75:
-                print(f"\nRE WIP cleaning operation at 75% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 75% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 quarter_3 = False
             elif dime_6 and current_progress >= 0.6:
-                print(f"\nRE WIP cleaning operation at 60% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 60% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 dime_6 = False
             elif half and current_progress >= 0.5:
-                print(f"\nRE WIP cleaning operation at 50% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 50% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 half = False
             elif dime_4 and current_progress >= 0.4:
-                print(f"\nRE WIP cleaning operation at 40% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 40% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 dime_4 = False
             elif dime_3 and current_progress >= 0.3:
-                print(f"\nRE WIP cleaning operation at 30% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 30% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 dime_3 = False
             elif quarter and current_progress >= 0.25:
-                print(f"\nRE WIP cleaning operation at 25% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 25% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 quarter = False
             elif dime_2 and current_progress >= 0.2:
-                print(f"\nRE WIP cleaning operation at 20% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 20% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 dime_2 = False
             elif dime and current_progress >= 0.1:
-                print(f"\nRE WIP cleaning operation at 10% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 10% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 dime = False
             elif nickel and current_progress >= 0.05:
-                print(f"\nRE WIP cleaning operation at 5% ({distinctSN_count} items to clean)")
+                print(f"\nRE WIP cleaning operation at 5% ({distinctSN_count} items to clean) "
+                      f"T: {dt.now() - cleaning_start}")
                 nickel = False
-        print(f"\nRE WIP data is done cleaning. Duration: {dt.now() - cleaning_start}\n")
+        print(f"\nRE WIP cleaning operation at 100%. Duration: {dt.now() - cleaning_start}\n")
 
     # Convert WIP list to a dataframe
     allocation_start = dt.now()
