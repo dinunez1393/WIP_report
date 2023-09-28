@@ -3,6 +3,7 @@ import pandas as pd
 from model import *
 from extraction import *
 from utilities import *
+from loading import *
 from tqdm import tqdm
 import asyncio
 import logging
@@ -183,13 +184,14 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     return re_rawData_df, sr_rawData_df
 
 
-def assign_wip(rawData_df, result_store, isServerLevel=True, latest_wip_status_df=None):
+def assign_wip(rawData_df, thread_lock, db_conn, isServerLevel=True, latest_wip_status_df=None):
     """
     Function that cleans the processed raw data to make a full WIP report
     :param rawData_df: the dataframe containing the raw data
     :type rawData_df: pandas.Dataframe
-    :param result_store: A list object for storing the cleaned results
-    :type result_store: list
+    :param thread_lock: A lock for the thread that will be use to upload the data to SQL
+    :type thread_lock: threading.Lock
+    :param db_conn: The connection to the database
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
     :param latest_wip_status_df: a dataframe containing the serial numbers in WIP table with their respective MAX
     snapshot time - Disabled indefinitely
@@ -348,11 +350,17 @@ def assign_wip(rawData_df, result_store, isServerLevel=True, latest_wip_status_d
     print(f"Cleaned {'SR' if isServerLevel else 'RE'} WIP data allocation completed successfully in "
           f"{dt.now() - allocation_start}\n")
 
-    # Store results
-    if isServerLevel:
-        result_store[0] = final_wip_df
-    else:
-        result_store[1] = final_wip_df
+    # Load results
+    logger.info(f"INSERTING {'SR' if isServerLevel else 'RE'} WIP data - WARNING: This zone is locked ({dt.now()})")
+    with thread_lock:
+        load_wip_data(db_conn, final_wip_df, to_csv=False, isServer=isServerLevel)
+
+    # Disabled indefinitely
+    # # Store results
+    # if isServerLevel:
+    #     result_store[0] = final_wip_df
+    # else:
+    #     result_store[1] = final_wip_df
 
 
 def assign_shipmentStatus(db_conn):

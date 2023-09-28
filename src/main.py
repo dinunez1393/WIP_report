@@ -74,19 +74,14 @@ if __name__ == '__main__':
         # latest_wip_status_df = select_wip_maxStatus(conn_sbi, isForUpdate=False)
 
         # Clean the data in threads and make a WIP report
-        result_storage = ['dummy_1', 'dummy_2']
-        thread_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df, result_storage))
-        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, result_storage, False))
+        lock = threading.Lock()
+        thread_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df, lock, conn_sbi))
+        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, lock, conn_sbi, False))
         thread_sr.start()
         thread_re.start()
         thread_sr.join()
         thread_re.join()
 
-        # Upload the cleaned data
-        sr_wip_df = result_storage[0]
-        re_wip_df = result_storage[1]
-        load_wip_data(conn_sbi, sr_wip_df, to_csv=False)
-        load_wip_data(conn_sbi, re_wip_df, to_csv=False, isServer=False)
         # Update order type and factory status NULL values
         update_orderType_factoryStatus(conn_sbi)
 
