@@ -104,7 +104,7 @@ class ServerHistory:
                 location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
-                location_row['PackedPreviously_flag'] = least_packingDate <= transaction_timestamp
+                location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
                 wipHistory_tuples.append(location_row_tuple)
@@ -209,7 +209,7 @@ class RackHistory:
                 location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
-                location_row['PackedPreviously_flag'] = least_packingDate <= transaction_timestamp
+                location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
                 wipHistory_tuples.append(location_row_tuple)
