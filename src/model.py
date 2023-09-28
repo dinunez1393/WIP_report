@@ -42,8 +42,13 @@ class ServerHistory:
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
             minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
 
-            # Check if the unit has ever been packed
-            wasPacked = self.sr_checkpoints_df['CheckPointId'].isin(self.shipmentCkps).any()
+            # Get the least packing transaction timestamp
+            packing_df = self.sr_checkpoints_df[self.sr_checkpoints_df['CheckPointId'].isin(self.shipmentCkps)]
+            # Assign dummy value in the future if the current instance does not have a packing date yet
+            if packing_df.shape[0] < 1:
+                least_packingDate = dt.now() + timedelta(days=10)
+            else:
+                least_packingDate = packing_df['TransactionDate'].min(skipna=True)
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -99,7 +104,7 @@ class ServerHistory:
                 location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
-                location_row['PackedPreviously_flag'] = wasPacked
+                location_row['PackedPreviously_flag'] = least_packingDate <= transaction_timestamp
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
                 wipHistory_tuples.append(location_row_tuple)
@@ -142,8 +147,13 @@ class RackHistory:
             starterCkps_df = starterCkps_df.sort_values('TransactionDate', ascending=False)
             minThreshold = dt.now() - timedelta(days=DAYS_BACK)  # Use only for initial population of the SQL table
 
-            # Check if the unit has ever been packed
-            wasPacked = self.re_checkpoints_df['CheckPointId'].isin(self.shipmentCkps).any()
+            # Get the least packing transaction timestamp
+            packing_df = self.re_checkpoints_df[self.re_checkpoints_df['CheckPointId'].isin(self.shipmentCkps)]
+            # Assign dummy value in the future if the current instance does not have a packing date yet
+            if packing_df.shape[0] < 1:
+                least_packingDate = dt.now() + timedelta(days=10)
+            else:
+                least_packingDate = packing_df['TransactionDate'].min(skipna=True)
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -199,7 +209,7 @@ class RackHistory:
                 location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
-                location_row['PackedPreviously_flag'] = wasPacked
+                location_row['PackedPreviously_flag'] = least_packingDate <= transaction_timestamp
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
                 wipHistory_tuples.append(location_row_tuple)
