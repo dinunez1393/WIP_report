@@ -55,6 +55,9 @@ class ServerHistory:
             if self.sap_historicalStatus_df is not None:
                 self.sap_historicalStatus_df = self.sap_historicalStatus_df.sort_values('EXTRACTED_DATE_TIME',
                                                                                         ascending=False)
+                sap_exists = True
+            else:
+                sap_exists = False
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -105,7 +108,7 @@ class ServerHistory:
                 location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
                                            day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
                 # Get the SAP status for this WIP snapshot date (current_date)
-                if self.sap_historicalStatus_df is not None:
+                if sap_exists:
                     current_historicalStatus_df = \
                         self.sap_historicalStatus_df[
                             self.sap_historicalStatus_df['EXTRACTED_DATE_TIME'] <= current_date]
@@ -175,6 +178,9 @@ class RackHistory:
             if self.sap_historicalStatus_df is not None:
                 self.sap_historicalStatus_df = self.sap_historicalStatus_df.sort_values('EXTRACTED_DATE_TIME',
                                                                                         ascending=False)
+                sap_exists = True
+            else:
+                sap_exists = False
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -225,7 +231,7 @@ class RackHistory:
                 location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
                                            day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
                 # Get the SAP status for this WIP snapshot date (current_date)
-                if self.sap_historicalStatus_df is not None:
+                if sap_exists:
                     current_historicalStatus_df = \
                         self.sap_historicalStatus_df[
                             self.sap_historicalStatus_df['EXTRACTED_DATE_TIME'] <= current_date]
