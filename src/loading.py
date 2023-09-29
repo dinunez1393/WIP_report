@@ -169,12 +169,12 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                             print(f"\nRE WIP INSERT operation at 100%. Duration: {dt.now() - insert_start}\n")
 
                         # Insert remaining values
-                        print(f"Inserting an additional small size ({len(wip_remaining)}) "
+                        print(f"Inserting an additional small size ({len(wip_remaining)} rows) "
                               f"of {'SR' if isServer else 'RE'} WIP records in the background...")
                         cursor.execute(insert_query.format(items_to_SQL_values(
                             wip_values_remaining, isForUpdate=False, chunk_size=len(wip_remaining))))
                     else:  # Insert small chunk (less than 1,000 rows)
-                        print(f"Inserting a small size ({len(cleaned_wip_list)}) of {'SR' if isServer else 'RE'} "
+                        print(f"Inserting a small size ({len(cleaned_wip_list)} rows) of {'SR' if isServer else 'RE'} "
                               f"WIP records in the background...")
                         cursor.execute(insert_query.format(items_to_SQL_values(
                             wip_values, isForUpdate=False, chunk_size=len(cleaned_wip_list))))

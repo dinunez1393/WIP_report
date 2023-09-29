@@ -68,15 +68,15 @@ if __name__ == '__main__':
         delete_allData(conn_sbi)
 
         # Get all the raw data
-        re_rawData_df, sr_rawData_df = asyncio.run(initializer(conn_sbi))
+        re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
 
         # Get the latest WIP status to continue counting WIP from there - Disabled indefinitely
         # latest_wip_status_df = select_wip_maxStatus(conn_sbi, isForUpdate=False)
 
         # Clean the data in threads and make a WIP report
         lock = threading.Lock()
-        thread_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df, lock, conn_sbi))
-        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, lock, conn_sbi, False))
+        thread_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df, sr_sap_statusH_df, lock, conn_sbi))
+        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, re_sap_statusH_df, lock, conn_sbi, False))
         thread_sr.start()
         thread_re.start()
         thread_sr.join()

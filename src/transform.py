@@ -16,7 +16,7 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     Note: The data is not totally raw. It has passed some processing by merging.
     :param async_pool_asbuilt: Asynchronous pool for Asbuilt DB
     :param conn_sbi: The connection for SBI DB
-    :return: A tuple containing two dataframes for rack and server raw data
+    :return: A tuple containing four dataframes for rack and server raw data
     :rtype: tuple
     """
 
@@ -26,14 +26,15 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     wip_maxDate = datetime_from_py_to_sql(select_wip_maxDate(conn_sbi))
     results = await asyncio.gather(select_ph_rawData(async_pool_asbuilt, wip_maxDate),
                                    select_ph_rackBuildData(async_pool_asbuilt, wip_maxDate),
-                                   select_ph_rackEoL_data(async_pool_asbuilt, wip_maxDate))
+                                   select_ph_rackEoL_data(async_pool_asbuilt, wip_maxDate),
+                                   select_sap_historicalStatus(async_pool_asbuilt, wip_maxDate))
     print(f"\nTOTAL extraction time: {dt.now() - extraction_start}")
     print("Data allocation is running in the background...")
 
-    re_rawData_df = results[0][0]
-    sr_rawData_df = results[0][1]
+    re_rawData_df, sr_rawData_df = results[0]
     re_rackBuild_df = results[1]
     re_rackEoL_df = results[2]
+    sr_sap_statusH_df, re_sap_statusH_df = results[3]
 
     # Purge Rack Build, End-of-Line and Rack Hi-Pot data that might be in server data to avoid having
     # duplicates further on
@@ -45,12 +46,11 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     # Server assembly finish data
     sr_assemblyFinish_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 101]
     sr_assemblyFinish_df = sr_assemblyFinish_df[['SerialNumber', 'StockCode', 'TransactionDate', 'CheckPointId', 'SKU',
-                                                 'OrderType', 'FactoryStatus']]
+                                                 'OrderType']]
     sr_assemblyFinish_df = sr_assemblyFinish_df.rename(columns={'StockCode': 'StockCode_af',
                                                                 'TransactionDate': 'TransactionDate_af',
                                                                 'SKU': 'SKU_af',
-                                                                'OrderType': 'OrderType_af',
-                                                                'FactoryStatus': 'FactoryStatus_af'})
+                                                                'OrderType': 'OrderType_af'})
 
     # SLT check-in data
     sr_sltIn_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 150]
@@ -69,29 +69,27 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     sr_rackBuild_df['TransID'] = sr_rackBuild_df['TransID'].add(10_000_000_000)
     sr_rackBuild_df['TransID'] = sr_rackBuild_df['TransID'] + sr_rackBuild_df['int_SN']
     # Move the SR stock code to the StockCode column, which currently has the RE-StockCode,
-    # and RE-checkpoint ID to the checkpoint ID column, as well as SKU, OrderType, and FactoryStatus for server
+    # and RE-checkpoint ID to the checkpoint ID column, as well as SKU, and OrderType for server
     sr_rackBuild_df['StockCode'] = sr_rackBuild_df['StockCode_af']
     sr_rackBuild_df['CheckPointId'] = sr_rackBuild_df['CheckPointId_y'].astype(int)
     sr_rackBuild_df['SKU'] = sr_rackBuild_df['SKU_af']
     sr_rackBuild_df['OrderType'] = sr_rackBuild_df['OrderType_af']
-    sr_rackBuild_df['FactoryStatus'] = sr_rackBuild_df['FactoryStatus_af']
 
     # Concatenate server rack build data to main server raw data and drop unnecessary columns
     sr_rawData_df = pd.concat([sr_rawData_df, sr_rackBuild_df], ignore_index=True)
     sr_rawData_df = sr_rawData_df.drop(columns=['TransactionDate_sltIn', 'CheckPointId_x', 'RackSN',
                                                 'CheckPointId_y', 'StockCode_af', 'SKU_af', 'OrderType_af',
-                                                'FactoryStatus_af', 'TransactionDate_af', 'int_SN'])
+                                                'TransactionDate_af', 'int_SN'])
 
     # Merge Rack End of Line data for server:
     # Server SLT-pass data
     sr_sltPass_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 102]
     sr_sltPass_df = sr_sltPass_df[['SerialNumber', 'StockCode', 'TransactionDate', 'CheckPointId', 'SKU',
-                                   'OrderType', 'FactoryStatus']]
+                                   'OrderType']]
     sr_sltPass_df = sr_sltPass_df.rename(columns={'StockCode': 'StockCode_sltP',
                                                   'TransactionDate': 'TransactionDate_sltP',
                                                   'SKU': 'SKU_sltP',
-                                                  'OrderType': 'OrderType_sltP',
-                                                  'FactoryStatus': 'FactoryStatus_sltP'})
+                                                  'OrderType': 'OrderType_sltP'})
 
     # Server rack scan 1 data
     sr_rackScan_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 202]
@@ -110,31 +108,29 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     sr_rackEoL_df['TransID'] = sr_rackEoL_df['TransID'].add(10_000_000_000)
     sr_rackEoL_df['TransID'] = sr_rackEoL_df['TransID'] + sr_rackEoL_df['int_SN']
     # Move the SR stock code to the StockCode column, which currently has the RE-StockCode,
-    # and RE-checkpoint ID to the checkpoint ID column, as well as SKU, OrderType, and FactoryStatus for server
+    # and RE-checkpoint ID to the checkpoint ID column, as well as SKU, and OrderType for server
     sr_rackEoL_df['StockCode'] = sr_rackEoL_df['StockCode_sltP']
     sr_rackEoL_df['CheckPointId'] = sr_rackEoL_df['CheckPointId_y'].astype(int)
     sr_rackEoL_df['SKU'] = sr_rackEoL_df['SKU_sltP']
     sr_rackEoL_df['OrderType'] = sr_rackEoL_df['OrderType_sltP']
-    sr_rackEoL_df['FactoryStatus'] = sr_rackEoL_df['FactoryStatus_sltP']
 
     # Concatenate server rack End-of-Line data to main server raw data and drop unnecessary columns
     sr_rawData_df = pd.concat([sr_rawData_df, sr_rackEoL_df], ignore_index=True)
     sr_rawData_df = sr_rawData_df.drop(columns=['TransactionDate_rs', 'CheckPointId_x', 'RackSN',
                                                 'CheckPointId_y', 'StockCode_sltP', 'SKU_sltP', 'OrderType_sltP',
-                                                'FactoryStatus_sltP', 'TransactionDate_sltP', 'int_SN'])
+                                                'TransactionDate_sltP', 'int_SN'])
 
     # Merge Rack Hi-Pot data for server. Note: Server data exists in rack hipot checkpoint, but it is not complete
     # Server Rack Test check-out data
     sr_rackTestOut_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 224]
     sr_rackTestOut_df = sr_rackTestOut_df[['SerialNumber', 'StringField1', 'StockCode', 'TransactionDate',
-                                           'CheckPointId', 'SKU', 'OrderType', 'FactoryStatus']]
+                                           'CheckPointId', 'SKU', 'OrderType']]
     sr_rackTestOut_df = sr_rackTestOut_df.rename(columns={'StringField1': 'RackSN',
                                                           'StockCode': 'StockCode_rt',
                                                           'TransactionDate': 'TransactionDate_rt',
                                                           'CheckPointId': 'CheckPointId_rt',
                                                           'SKU': 'SKU_rt',
-                                                          'OrderType': 'OrderType_rt',
-                                                          'FactoryStatus': 'FactoryStatus_rt'})
+                                                          'OrderType': 'OrderType_rt'})
 
     # Server final touch check-in data
     sr_finalTouch_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 228]
@@ -158,19 +154,18 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     sr_rackHipot_df['TransID'] = sr_rackHipot_df['TransID'].add(10_000_000_000)
     sr_rackHipot_df['TransID'] = sr_rackHipot_df['TransID'] + sr_rackHipot_df['int_SN']
     # Move the SR stock code to the StockCode column, which currently has the RE-StockCode,
-    # and RE-checkpoint ID to the checkpoint ID column, as well as RackSN, SKU, OrderType, and FactoryStatus for server
+    # and RE-checkpoint ID to the checkpoint ID column, as well as RackSN, SKU, and OrderType for server
     sr_rackHipot_df['StockCode'] = sr_rackHipot_df['StockCode_rt']
     sr_rackHipot_df['CheckPointId'] = sr_rackHipot_df['CheckPointId'].astype(int)
     sr_rackHipot_df['StringField1'] = sr_rackHipot_df['RackSN']
     sr_rackHipot_df['SKU'] = sr_rackHipot_df['SKU_rt']
     sr_rackHipot_df['OrderType'] = sr_rackHipot_df['OrderType_rt']
-    sr_rackHipot_df['FactoryStatus'] = sr_rackHipot_df['FactoryStatus_rt']
 
     # Concatenate rack hi-pot for server data to main server raw data and drop unnecessary columns
     sr_rawData_df = pd.concat([sr_rawData_df, sr_rackHipot_df], ignore_index=True)
     sr_rawData_df = sr_rawData_df.drop(columns=['TransactionDate_ft', 'CheckPointId_ft', 'CheckPointId_rt',
                                                 'RackSN', 'StockCode_rt', 'SKU_rt', 'OrderType_rt',
-                                                'FactoryStatus_rt', 'TransactionDate_rt', 'int_SN'])
+                                                'TransactionDate_rt', 'int_SN'])
     # Label the unit type: Server or rack
     sr_rawData_df['ProductType'] = "Server"
     re_rawData_df['ProductType'] = "Rack"
@@ -179,16 +174,23 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     sr_rawData_df = sr_rawData_df.drop_duplicates(subset=['TransID'])
     re_rawData_df = re_rawData_df.drop_duplicates(subset=['TransID'])
 
+    # Drop SNs from SAP Historical Status dataframes that do not match the SNs in the PH raw dataframes
+    sr_sap_statusH_df = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_df['SerialNumber'])]
+    re_sap_statusH_df = re_sap_statusH_df[re_sap_statusH_df['SerialNumber'].isin(re_rawData_df['SerialNumber'])]
+
     print(f"\nTOTAL raw data allocation time: {dt.now() - extraction_start}")
 
-    return re_rawData_df, sr_rawData_df
+    return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
 
 
-def assign_wip(rawData_df, thread_lock, db_conn, isServerLevel=True, latest_wip_status_df=None):
+def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServerLevel=True,
+               latest_wip_status_df=None):
     """
     Function that cleans the processed raw data to make a full WIP report
-    :param rawData_df: the dataframe containing the raw data
+    :param rawData_df: dataframe containing product history raw data
     :type rawData_df: pandas.Dataframe
+    :param sap_historicalStatus_df: dataframe containing SAP historical status data
+    :type sap_historicalStatus_df: pandas.Dataframe
     :param thread_lock: A lock for the thread that will be use to upload the data to SQL
     :type thread_lock: threading.Lock
     :param db_conn: The connection to the database
@@ -234,7 +236,10 @@ def assign_wip(rawData_df, thread_lock, db_conn, isServerLevel=True, latest_wip_
     # Reindex the raw data and concatenate with existing data from WIP table
     rawData_df = rawData_df.reindex(columns=wip_columns)
     # rawData_df = pd.concat([rawData_df, latest_wip_status_df], ignore_index=True) - Disabled indefinitely
+
+    # Group the product history raw data and the SAP historical status data by Serial Number
     ph_instances_grouped = rawData_df.groupby('SerialNumber')
+    sap_statusH_grouped = sap_historicalStatus_df.groupby('SerialNumber')
 
     # Flags for process progress
     nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 = dime_8 = ninety = ninety_5 = True
@@ -242,7 +247,13 @@ def assign_wip(rawData_df, thread_lock, db_conn, isServerLevel=True, latest_wip_
     # Cleaning
     if isServerLevel:  # Cleaning for Server Level WIP
         for serialNumber, ph_instance_df in tqdm(ph_instances_grouped, desc="SR WIP cleaning operation progress"):
-            cleaned_wip = ServerHistory(ph_instance_df.reset_index(drop=True))
+            # Get the SAP historical status data for this serial number
+            try:
+                sap_historicalStatus_df = sap_statusH_grouped.get_group(serialNumber).reset_index(drop=True)
+            except KeyError:
+                sap_historicalStatus_df = None
+
+            cleaned_wip = ServerHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df)
             wip_list.extend(cleaned_wip.determine_processAndArea())
             if len(wip_list) > 1_000_000:
                 master_list.append(wip_list.copy())
@@ -250,7 +261,13 @@ def assign_wip(rawData_df, thread_lock, db_conn, isServerLevel=True, latest_wip_
     else:  # Cleaning for Rack Level WIP
         print("RE WIP cleaning operation is running on the background. Progress will show intermittently")
         for serialNumber, ph_instance_df in ph_instances_grouped:
-            cleaned_wip = RackHistory(ph_instance_df.reset_index(drop=True))
+            # Get the SAP historical status data for this serial number
+            try:
+                sap_historicalStatus_df = sap_statusH_grouped.get_group(serialNumber).reset_index(drop=True)
+            except KeyError:
+                sap_historicalStatus_df = None
+
+            cleaned_wip = RackHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df)
             wip_list.extend(cleaned_wip.determine_processAndArea())
             if len(wip_list) > 1_000_000:
                 master_list.append(wip_list.copy())

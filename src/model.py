@@ -12,8 +12,9 @@ class ServerHistory:
     Class represents an instance of a server and its checkpoints - data comes from product history
     """
 
-    def __init__(self, sr_checkpoints_df):
+    def __init__(self, sr_checkpoints_df, sap_historicalStatus_df):
         self.sr_checkpoints_df = sr_checkpoints_df
+        self.sap_historicalStatus_df = sap_historicalStatus_df
         self.shipmentCkps = {300, 301, 302}
         self.criticalCkps = {100, 101, 200, 235, 254, 208, 252, 150, 170, 216, 218, 260, 243, 2470, 228, 270, 230, 300,
                              301, 1510, 234, 302}
@@ -49,6 +50,11 @@ class ServerHistory:
                 least_packingDate = dt.now() + timedelta(days=10)
             else:
                 least_packingDate = packing_df['TransactionDate'].min(skipna=True)
+
+            # Sort SAP historical status dataframe in descending order of extraction timestamp
+            if self.sap_historicalStatus_df is not None:
+                self.sap_historicalStatus_df = self.sap_historicalStatus_df.sort_values('EXTRACTED_DATE_TIME',
+                                                                                        ascending=False)
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -98,10 +104,19 @@ class ServerHistory:
                 # Get the row that has the current location of the server
                 location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
                                            day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
+                # Get the SAP status for this WIP snapshot date (current_date)
+                if self.sap_historicalStatus_df is not None:
+                    current_historicalStatus_df = \
+                        self.sap_historicalStatus_df[
+                            self.sap_historicalStatus_df['EXTRACTED_DATE_TIME'] <= current_date]
+                    if current_historicalStatus_df.shape[0] > 0:
+                        current_status = current_historicalStatus_df['STATUS'].iloc[0]
+                        location_row['FactoryStatus'] = current_status
                 # Calculate Working dwell time
                 transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
-                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
+                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date,
+                                                                        calendar=False)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
@@ -119,8 +134,9 @@ class RackHistory:
     Class represents an instance of a rack and its checkpoints - data comes from product history
     """
 
-    def __init__(self, re_checkpoints_df):
+    def __init__(self, re_checkpoints_df, sap_historicalStatus_df):
         self.re_checkpoints_df = re_checkpoints_df
+        self.sap_historicalStatus_df = sap_historicalStatus_df
         self.shipmentCkps = {300, 301}
         self.criticalCkps = {200, 235, 254, 208, 252, 150, 170, 216, 218, 260, 243, 2470, 228, 270, 230, 300, 301}
         self.areas = {'Rack Build': [200, 235, 254, 208, 252],
@@ -154,6 +170,11 @@ class RackHistory:
                 least_packingDate = dt.now() + timedelta(days=10)
             else:
                 least_packingDate = packing_df['TransactionDate'].min(skipna=True)
+
+            # Sort SAP historical status dataframe in descending order of extraction timestamp
+            if self.sap_historicalStatus_df is not None:
+                self.sap_historicalStatus_df = self.sap_historicalStatus_df.sort_values('EXTRACTED_DATE_TIME',
+                                                                                        ascending=False)
 
             # Determine the right upper boundary
             if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -203,10 +224,19 @@ class RackHistory:
                 # Get the row that has the current location of the rack
                 location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
                                            day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
+                # Get the SAP status for this WIP snapshot date (current_date)
+                if self.sap_historicalStatus_df is not None:
+                    current_historicalStatus_df = \
+                        self.sap_historicalStatus_df[
+                            self.sap_historicalStatus_df['EXTRACTED_DATE_TIME'] <= current_date]
+                    if current_historicalStatus_df.shape[0] > 0:
+                        current_status = current_historicalStatus_df['STATUS'].iloc[0]
+                        location_row['FactoryStatus'] = current_status
                 # Calculate Working dwell time
                 transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
-                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date)
+                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date,
+                                                                        calendar=False)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp

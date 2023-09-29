@@ -7,8 +7,8 @@ import logging
 
 SQL_Q_ERROR = "An SQL SELECT statement error occurred"
 # To build table from scratch
-if dt.now().date() == date(2023, 9, 27):
-    DATE_THRESHOLD = dt(2023, 9, 15, 0, 0)
+if dt.now().date() == date(2023, 9, 29):
+    DATE_THRESHOLD = dt(2023, 9, 16, 0, 0)
 else:  # Normal runs
     DATE_THRESHOLD = dt.now() - timedelta(days=400)
 
@@ -73,20 +73,17 @@ async def select_ph_rawData(async_pool, date_threshold):
           ,ph.[TransID]
           ,agi_SS.[SKU]
           ,sap_mfgPO.[OrderTypeCode] AS OrderType
-          ,sap_snStat.[STATUS_SerialNumberStatus] AS FactoryStatus
       FROM [ASBuiltDW].[dbo].[producthistory] AS ph
       INNER JOIN [ASBuiltDW].[dbo].[tbl_ref_agile_SSCode] AS agi_SS
             ON ph.StockCode = agi_SS.ITEM_NUMBER
       LEFT JOIN [ASBuiltDW].[dbo].[tbl_Manufacturing_ProductionOrdersSAP_Current] AS sap_mfgPO
             ON SUBSTRING(ph.[SerialNumber], 1, 8) = sap_mfgPO.[JobOrder]
-      LEFT JOIN [sapdb].[sap].[ZTPTP_SNSTATUS] AS sap_snStat
-            ON ph.[SerialNumber] = sap_snStat.[SERIAL_NO_SerialNumberSFC]
       WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
       AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
       AND LEN(ph.SerialNumber) = 12
       AND (ph.[StockCode] LIKE 'RE-%' OR ph.[StockCode] LIKE 'SR-%' OR ph.[StockCode] LIKE 'JB-%'
             OR ph.[StockCode] LIKE 'FR-%')
-      AND CheckPointId IN (100, 101, 200, 235, 236,
+      AND ph.[CheckPointId] IN (100, 101, 200, 235, 236,
                            254, 255, 208, 209,
                            252, 253, 201, 150, 102,
                            170, 216, 217, 218, 219,
@@ -165,19 +162,16 @@ async def select_ph_rackBuildData(async_pool, date_threshold):
              ,ph.[TransID]
              ,agi_SS.[SKU]
              ,sap_mfgPO.[OrderTypeCode] AS OrderType
-             ,sap_snStat.[STATUS_SerialNumberStatus] AS FactoryStatus
          FROM [ASBuiltDW].[dbo].[producthistory] AS ph
          INNER JOIN [ASBuiltDW].[dbo].[tbl_ref_agile_SSCode] AS agi_SS
                ON ph.StockCode = agi_SS.ITEM_NUMBER
          LEFT JOIN [ASBuiltDW].[dbo].[tbl_Manufacturing_ProductionOrdersSAP_Current] AS sap_mfgPO
                ON SUBSTRING(ph.[SerialNumber], 1, 8) = sap_mfgPO.[JobOrder]
-         LEFT JOIN [sapdb].[sap].[ZTPTP_SNSTATUS] AS sap_snStat
-               ON ph.[SerialNumber] = sap_snStat.[SERIAL_NO_SerialNumberSFC]
          WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
          AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
          AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
          AND ph.[StockCode] LIKE 'RE-%'
-         AND CheckPointId IN (200, 235, 236,
+         AND ph.[CheckPointId] IN (200, 235, 236,
                               254, 255, 208, 209,
                               252, 253, 201);
        """
@@ -231,19 +225,16 @@ async def select_ph_rackEoL_data(async_pool, date_threshold):
              ,ph.[TransID]
              ,agi_SS.[SKU]
              ,sap_mfgPO.[OrderTypeCode] AS OrderType
-             ,sap_snStat.[STATUS_SerialNumberStatus] AS FactoryStatus
          FROM [ASBuiltDW].[dbo].[producthistory] AS ph
          INNER JOIN [ASBuiltDW].[dbo].[tbl_ref_agile_SSCode] AS agi_SS
                ON ph.StockCode = agi_SS.ITEM_NUMBER
          LEFT JOIN [ASBuiltDW].[dbo].[tbl_Manufacturing_ProductionOrdersSAP_Current] AS sap_mfgPO
                ON SUBSTRING(ph.[SerialNumber], 1, 8) = sap_mfgPO.[JobOrder]
-         LEFT JOIN [sapdb].[sap].[ZTPTP_SNSTATUS] AS sap_snStat
-               ON ph.[SerialNumber] = sap_snStat.[SERIAL_NO_SerialNumberSFC]
          WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
          AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
          AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
          AND ph.[StockCode] LIKE 'RE-%'
-         AND CheckPointId IN (216, 217, 218, 219, 260);
+         AND ph.[CheckPointId] IN (216, 217, 218, 219, 260);
        """
     print("SELECT process for Rack End-of-Line raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
           "background...\n")
@@ -265,6 +256,55 @@ async def select_ph_rackEoL_data(async_pool, date_threshold):
         ph_rackEoL_df['TransactionDate'] = pd.to_datetime(ph_rackEoL_df['TransactionDate'])
         print("SELECT process for raw rack End-of-Line data ran successfully\n")
         return ph_rackEoL_df
+
+
+async def select_sap_historicalStatus(async_pool, date_threshold):
+    """
+    SELECT function to get the historical status data from SAP
+    :param async_pool: The asynchronous pool to access the DB
+    :param date_threshold: the datetime in SQL format used as the lower limit of data extraction
+    :type date_threshold: str
+    :return: Two dataframes, one for SR and the other for RE,
+    containing historical SAP status data: SN, STATUS, Extraction Timestamp
+    :rtype: tuple
+    """
+    query = f"""
+        SELECT [SERIAL_NO] AS SerialNumber
+        ,[MATNR] AS StockCode
+        ,[STATUS]
+        ,[EXTRACTED_DATE_TIME]
+        FROM [sapdb].[sap].[ZTPTP_SNSTATUS_SerialStatus_History]
+        WHERE [EXTRACTED_DATE_TIME] > '{date_threshold}'
+        AND [BUKRS] = 'US01' AND ([MATNR] LIKE 'RE-%' OR [MATNR] LIKE 'SR-%' OR [MATNR] LIKE 'JB-%'
+            OR [MATNR] LIKE 'FR-%')
+    """
+    print("SELECT process for SAP Historical Status data is running on the background...\n")
+    try:
+        async with async_pool.acquire() as db_conn:
+            async with db_conn.cursor() as cursor:
+                await cursor.execute(query)
+                rows = await cursor.fetchall()
+                cols = [column[0] for column in cursor.description]
+                sap_historySatuts_df = pd.DataFrame.from_records(rows, columns=cols)
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(SQL_Q_ERROR, exc_info=True)
+        show_message(AlertType.FAILED)
+    else:
+        # Ensure correct Serial Numbers by cleaning leading and trailing spaces
+        sap_historySatuts_df['SerialNumber'] = sap_historySatuts_df['SerialNumber'].str.strip()
+        # Ensure Extraction date is of type datetime
+        sap_historySatuts_df['EXTRACTED_DATE_TIME'] = pd.to_datetime(sap_historySatuts_df['EXTRACTED_DATE_TIME'])
+        # Separate SR and RE data
+        re_mask = sap_historySatuts_df['StockCode'].str.contains(r"^RE-\d{3,5}-?\d{0,3}")
+        sr_mask = ~sap_historySatuts_df['StockCode'].str.contains(r"^RE-\d{3,5}-?\d{0,3}")
+        re_sap_statusH_df = sap_historySatuts_df[re_mask]
+        sr_sap_statusH_df = sap_historySatuts_df[sr_mask]
+        # Drop StockCode column
+        re_sap_statusH_df.drop(columns=['StockCode'])
+        sr_sap_statusH_df.drop(columns=['StockCode'])
+        print("SELECT process for SAP Historical Status data ran successfully\n")
+        return sr_sap_statusH_df, re_sap_statusH_df
 
 
 def select_wip_maxStatus(db_conn, isForUpdate=True):
