@@ -174,10 +174,6 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     sr_rawData_df = sr_rawData_df.drop_duplicates(subset=['TransID'])
     re_rawData_df = re_rawData_df.drop_duplicates(subset=['TransID'])
 
-    # Drop SNs from SAP Historical Status dataframes that do not match the SNs in the PH raw dataframes
-    sr_sap_statusH_df = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_df['SerialNumber'])]
-    re_sap_statusH_df = re_sap_statusH_df[re_sap_statusH_df['SerialNumber'].isin(re_rawData_df['SerialNumber'])]
-
     print(f"\nTOTAL raw data allocation time: {dt.now() - extraction_start}")
 
     return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
@@ -189,9 +185,9 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     Function that cleans the processed raw data to make a full WIP report
     :param rawData_df: dataframe containing product history raw data
     :type rawData_df: pandas.Dataframe
-    :param sap_historicalStatus_df: dataframe containing SAP historical status data
+    :param sap_historicalStatus_df: A dataframe containing SAP historical status data
     :type sap_historicalStatus_df: pandas.Dataframe
-    :param thread_lock: A lock for the thread that will be use to upload the data to SQL
+    :param thread_lock: A lock for the thread that will be used to upload the data to SQL
     :type thread_lock: threading.Lock
     :param db_conn: The connection to the database
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data

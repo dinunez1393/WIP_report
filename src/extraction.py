@@ -10,7 +10,7 @@ SQL_Q_ERROR = "An SQL SELECT statement error occurred"
 if dt.now().date() == date(2023, 9, 29):
     DATE_THRESHOLD = dt(2023, 9, 16, 0, 0)
 else:  # Normal runs
-    DATE_THRESHOLD = dt.now() - timedelta(days=400)
+    DATE_THRESHOLD = dt.now() - timedelta(days=380)
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.ERROR)
@@ -269,23 +269,45 @@ async def select_sap_historicalStatus(async_pool, date_threshold):
     :rtype: tuple
     """
     query = f"""
+        WITH phSNs_CTE AS (
+            SELECT DISTINCT [SerialNumber]
+            FROM [ASBuiltDW].[dbo].[producthistory]
+            WHERE [Site] = 'NJ' AND [TransactionDate] > '{date_threshold}'
+              AND [TransactionDate] <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
+              AND LEN([SerialNumber]) = 12
+              AND ([StockCode] LIKE 'RE-%' OR [StockCode] LIKE 'SR-%' OR [StockCode] LIKE 'JB-%'
+                    OR [StockCode] LIKE 'FR-%')
+              AND [CheckPointId] IN (100, 101, 200, 235, 236,
+                                   254, 255, 208, 209,
+                                   252, 253, 201, 150, 102,
+                                   170, 216, 217, 218, 219,
+                                   260, 202, 243, 224,
+                                   247, 228, 229,
+                                   270, 237, 230, 231,
+                                   300, 301,
+                                   151, 234, 302)
+        )
         SELECT [SERIAL_NO] AS SerialNumber
         ,[MATNR] AS StockCode
         ,[STATUS]
         ,[EXTRACTED_DATE_TIME]
         FROM [sapdb].[sap].[ZTPTP_SNSTATUS_SerialStatus_History]
         WHERE [EXTRACTED_DATE_TIME] > '{date_threshold}'
-        AND [BUKRS] = 'US01' AND ([MATNR] LIKE 'RE-%' OR [MATNR] LIKE 'SR-%' OR [MATNR] LIKE 'JB-%'
-            OR [MATNR] LIKE 'FR-%')
+        AND [BUKRS] = 'US01' AND [SERIAL_NO] IN (SELECT * FROM phSNs_CTE);
     """
     print("SELECT process for SAP Historical Status data is running on the background...\n")
     try:
+        time_tracker = dt.now()
         async with async_pool.acquire() as db_conn:
             async with db_conn.cursor() as cursor:
                 await cursor.execute(query)
                 rows = await cursor.fetchall()
+                print(f"SAP Historical Status query execution is done. T: {dt.now() - time_tracker}")
+                time_tracker = dt.now()
                 cols = [column[0] for column in cursor.description]
                 sap_historySatuts_df = pd.DataFrame.from_records(rows, columns=cols)
+                print(f"SAP Historical Status dataframe is built. T: {dt.now() - time_tracker}")
+                time_tracker = dt.now()
     except Exception as e:
         print(repr(e))
         LOGGER.error(SQL_Q_ERROR, exc_info=True)
@@ -295,6 +317,8 @@ async def select_sap_historicalStatus(async_pool, date_threshold):
         sap_historySatuts_df['SerialNumber'] = sap_historySatuts_df['SerialNumber'].str.strip()
         # Ensure Extraction date is of type datetime
         sap_historySatuts_df['EXTRACTED_DATE_TIME'] = pd.to_datetime(sap_historySatuts_df['EXTRACTED_DATE_TIME'])
+        print(f"SAP Historical Status dataframe data assurance is done. T: {dt.now() - time_tracker}")
+        time_tracker = dt.now()
         # Separate SR and RE data
         re_mask = sap_historySatuts_df['StockCode'].str.contains(r"^RE-\d{3,5}-?\d{0,3}")
         sr_mask = ~sap_historySatuts_df['StockCode'].str.contains(r"^RE-\d{3,5}-?\d{0,3}")
@@ -303,6 +327,7 @@ async def select_sap_historicalStatus(async_pool, date_threshold):
         # Drop StockCode column
         re_sap_statusH_df.drop(columns=['StockCode'])
         sr_sap_statusH_df.drop(columns=['StockCode'])
+        print(f"SAP Historical Status dataframe is split into two dataframes SR and RE. T: {dt.now() - time_tracker}")
         print("SELECT process for SAP Historical Status data ran successfully\n")
         return sr_sap_statusH_df, re_sap_statusH_df
 
