@@ -105,8 +105,7 @@ class ServerHistory:
                     current_date = current_date + timedelta(days=1)
                     continue
                 # Get the row that has the current location of the server
-                location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
-                                           day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
+                location_row = day_ckps_df.iloc[0]
                 # Get the SAP status for this WIP snapshot date (current_date)
                 if sap_exists:
                     current_historicalStatus_df = \
@@ -115,11 +114,8 @@ class ServerHistory:
                     if current_historicalStatus_df.shape[0] > 0:
                         current_status = current_historicalStatus_df['STATUS'].iloc[0]
                         location_row['FactoryStatus'] = current_status
-                # Calculate Working dwell time
                 transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
-                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date,
-                                                                        calendar=False)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
@@ -228,8 +224,7 @@ class RackHistory:
                     current_date = current_date + timedelta(days=1)
                     continue
                 # Get the row that has the current location of the rack
-                location_row = day_ckps_df[day_ckps_df['TransactionDate'] ==
-                                           day_ckps_df['TransactionDate'].max(skipna=True)].iloc[0]
+                location_row = day_ckps_df.iloc[0]
                 # Get the SAP status for this WIP snapshot date (current_date)
                 if sap_exists:
                     current_historicalStatus_df = \
@@ -238,11 +233,8 @@ class RackHistory:
                     if current_historicalStatus_df.shape[0] > 0:
                         current_status = current_historicalStatus_df['STATUS'].iloc[0]
                         location_row['FactoryStatus'] = current_status
-                # Calculate Working dwell time
                 transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
-                location_row['DwellTime_working'] = delta_working_hours(transaction_timestamp, current_date,
-                                                                        calendar=False)
                 # Assign shipment status
                 location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
                 location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp

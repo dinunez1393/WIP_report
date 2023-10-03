@@ -350,6 +350,16 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             wip_df['DwellTime_calendar'] /= 3600
             logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} "
                         f"WIP: Calendar dwell time calculations complete. T: {dt.now() - time_tracker}")
+            # For Working dwell time calculation separate the datetime data first, then calculate dwell time,
+            # then re-integrate the data back into the dataframe - this method results in lesser overhead
+            datetime_list = list(zip(wip_df['TransactionDate'], wip_df['SnapshotTime']))
+            workTime_results = []
+            for item in tqdm(datetime_list, total=len(datetime_list),
+                             desc=f"({index + 1}) Performing {'SR' if isServerLevel else 'RE'} "
+                                  f"work dwell time calculation:"):
+                workTime_results.append(delta_working_hours(item[0], item[1], calendar=False))
+            # Re-integrate to WIP dataframe
+            wip_df['DwellTime_working'] = pd.Series(workTime_results)
 
             # Assign the process areas
             for area, checkpoint_ids in tqdm(areas.items(), total=len(areas),
