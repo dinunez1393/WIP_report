@@ -131,7 +131,7 @@ def delta_working_hours(actual_start, actual_end, calendar=True):
 
 def str_extract_digits(str_input):
     """
-    Function converts a string into an int by extracting all its digits and ignoring and non-digit character
+    Function converts a string into an int by extracting all its digits and ignoring any non-digit character
     :param str_input: the string to convert to an int
     :return: the result of the conversion from string to integer
     :rtype: int
