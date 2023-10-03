@@ -56,7 +56,8 @@ async def initializer(connection_sbi):
 
 
 if __name__ == '__main__':
-    print("WIP ANALYSIS\n\n\n_______________________________________________________________________________________")
+    print(f"WIP ANALYSIS\n"
+          f"({dt.now()})\n\n_______________________________________________________________________________________")
     program_start = dt.now()
     try:
         # Establish DB Connections

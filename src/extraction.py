@@ -29,6 +29,7 @@ def select_wip_maxDate(db_conn, snapshotTime=False):
     print("SELECT process for MAX date from WIP is running in the background...")
 
     try:
+        time_tracker = dt.now()
         with db_conn.cursor() as cursor:
             cursor.execute(query)
             max_date = cursor.fetchone()
@@ -40,7 +41,8 @@ def select_wip_maxDate(db_conn, snapshotTime=False):
     else:
         if max_date is None:  # Table is empty
             max_date = DATE_THRESHOLD
-        print(f"SELECT process for MAX date from WIP ran successfully. The latest MAX date is: {max_date}")
+        print(f"SELECT process for MAX date from WIP ran successfully. The latest MAX date is: {max_date}\n"
+              f"T: {dt.now() - time_tracker}\n")
         return max_date
 
 
@@ -96,6 +98,7 @@ async def select_ph_rawData(async_pool, date_threshold):
     print("SELECT process for Server raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
           "background...\n")
     try:
+        time_tracker = dt.now()
         async with async_pool.acquire() as db_conn:
             async with db_conn.cursor() as cursor:
                 await cursor.execute(query)
@@ -130,7 +133,7 @@ async def select_ph_rawData(async_pool, date_threshold):
         sr_mask = ~ph_rawData_df['StockCode'].str.contains(r"^RE-\d{3,5}-?\d{0,3}")
         re_rawData_df = ph_rawData_df[re_mask]
         sr_rawData_df = ph_rawData_df[sr_mask]
-        print("SELECT process for main raw data ran successfully\n")
+        print(f"SELECT process for main raw data ran successfully\nT: {dt.now() - time_tracker}\n")
         return re_rawData_df, sr_rawData_df
 
 
@@ -178,6 +181,7 @@ async def select_ph_rackBuildData(async_pool, date_threshold):
     print("SELECT process for Rack Build raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
           "background...\n")
     try:
+        time_tracker = dt.now()
         async with async_pool.acquire() as db_conn:
             async with db_conn.cursor() as cursor:
                 await cursor.execute(query)
@@ -193,7 +197,7 @@ async def select_ph_rackBuildData(async_pool, date_threshold):
         ph_rackBuild_df['RackSN'] = ph_rackBuild_df['RackSN'].str.strip()
         # Re-assure TransactionDate is of type datetime
         ph_rackBuild_df['TransactionDate'] = pd.to_datetime(ph_rackBuild_df['TransactionDate'])
-        print("SELECT process for raw rack build data ran successfully\n")
+        print(f"SELECT process for raw rack build data ran successfully\nT: {dt.now() - time_tracker}\n")
         return ph_rackBuild_df
 
 
@@ -239,6 +243,7 @@ async def select_ph_rackEoL_data(async_pool, date_threshold):
     print("SELECT process for Rack End-of-Line raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
           "background...\n")
     try:
+        time_tracker = dt.now()
         async with async_pool.acquire() as db_conn:
             async with db_conn.cursor() as cursor:
                 await cursor.execute(query)
@@ -254,7 +259,7 @@ async def select_ph_rackEoL_data(async_pool, date_threshold):
         ph_rackEoL_df['RackSN'] = ph_rackEoL_df['RackSN'].str.strip()
         # Re-assure TransactionDate is of type datetime
         ph_rackEoL_df['TransactionDate'] = pd.to_datetime(ph_rackEoL_df['TransactionDate'])
-        print("SELECT process for raw rack End-of-Line data ran successfully\n")
+        print(f"SELECT process for raw rack End-of-Line data ran successfully\nT: {dt.now() - time_tracker}\n")
         return ph_rackEoL_df
 
 
@@ -374,6 +379,7 @@ def select_wip_maxStatus(db_conn, isForUpdate=True):
         {'' if isForUpdate else '*/'}
     """
     try:
+        time_tracker = dt.now()
         print(f"SELECT process for WIP data of distinct units {'that have not shipped ' if isForUpdate else ''}"
               f"is running in the background...\n")
         wip_shipmentStatus_df = pd.read_sql_query(query, db_conn, parse_dates=['TransactionDate', 'WIP_SnapshotDate',
@@ -384,5 +390,5 @@ def select_wip_maxStatus(db_conn, isForUpdate=True):
         show_message(AlertType.FAILED)
     else:
         print(f"SELECT process for WIP data of distinct units {'that have not shipped ' if isForUpdate else ''}"
-              f"ran successfully\n")
+              f"ran successfully\nT: {dt.now() - time_tracker}\n")
         return wip_shipmentStatus_df
