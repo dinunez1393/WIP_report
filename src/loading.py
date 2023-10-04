@@ -34,7 +34,7 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
 
         wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
             ['DwellTime_calendar', 'DwellTime_working']].applymap(lambda x: format(x, '.7f'))
-        wip_df[['NotShippedTransaction_flag', 'PackedPreviously_flag']] =\
+        wip_df[['NotShippedTransaction_flag', 'PackedPreviously_flag']] = \
             wip_df[['NotShippedTransaction_flag', 'PackedPreviously_flag']].astype(int)
         wip_df = wip_df.fillna('NULL')
         # Convert dataframe to tuples
@@ -102,31 +102,19 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                     if big_load:
                         upload_size = len(wip_values_chunked)
                         if isServer:
-                            # Stage the INSERT string instances
-                            staging_start = dt.now()
-                            print("Staging the SR WIP values in the background...")
-                            insert_staged = [insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False))
-                                             for wip_item in wip_values_chunked]
-                            print(f"Staging complete. T: {dt.now() - staging_start}")
-                            for wip_item in tqdm(insert_staged, total=upload_size,
+                            for wip_item in tqdm(wip_values_chunked, total=upload_size,
                                                  desc=f"INSERTING new {'SR' if isServer else 'RE'} "
                                                       f"WIP records in chunks"):
-                                cursor.execute(wip_item)
+                                cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
                         else:  # SQL upload for rack data
-                            # Stage the INSERT string instances
-                            staging_start = dt.now()
-                            print("Staging the RE WIP values in the background...")
-                            insert_staged = [insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False))
-                                             for wip_item in wip_values_chunked]
-                            print(f"Staging complete. T: {dt.now() - staging_start}")
                             insert_start = dt.now()
                             # Flags for process progress
-                            nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 =\
+                            nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 = \
                                 dime_8 = ninety = ninety_5 = True
                             print("\nRE WIP INSERT operation is running on the background. "
                                   "Progress will show intermittently\n")
-                            for index, wip_item in enumerate(insert_staged):
-                                cursor.execute(wip_item)
+                            for index, wip_item in enumerate(wip_values_chunked):
+                                cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
 
                                 # Progress feedback
                                 current_progress = (index + 1) / upload_size
@@ -180,12 +168,12 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                                     nickel = False
                             print(f"\nRE WIP INSERT operation at 100%. Duration: {dt.now() - insert_start}\n")
 
-                        # Insert remaining values
-                        if len(wip_remaining) > 0:
-                            print(f"Inserting an additional small size ({len(wip_remaining)} rows) "
-                                  f"of {'SR' if isServer else 'RE'} WIP records in the background...")
-                            cursor.execute(insert_query.format(items_to_SQL_values(
-                                wip_values_remaining, isForUpdate=False, chunk_size=len(wip_remaining))))
+                            # Insert remaining values
+                            if len(wip_remaining) > 0:
+                                print(f"Inserting an additional small size ({len(wip_remaining)} rows) "
+                                      f"of {'SR' if isServer else 'RE'} WIP records in the background...")
+                                cursor.execute(insert_query.format(items_to_SQL_values(
+                                    wip_values_remaining, isForUpdate=False, chunk_size=len(wip_remaining))))
                     else:  # Insert small chunk (less than 1,000 rows)
                         print(f"Inserting a small size ({len(cleaned_wip_list)} rows) of {'SR' if isServer else 'RE'} "
                               f"WIP records in the background...")
