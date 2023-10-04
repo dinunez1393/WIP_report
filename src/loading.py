@@ -102,20 +102,32 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                     if big_load:
                         upload_size = len(wip_values_chunked)
                         if isServer:
-                            for wip_item in tqdm(wip_values_chunked, total=upload_size,
+                            # Stage the INSERT string instances
+                            staging_start = dt.now()
+                            print("Staging the SR WIP values in the background...")
+                            insert_staged = [insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False))
+                                             for wip_item in wip_values_chunked]
+                            print(f"Staging complete. T: {dt.now() - staging_start}")
+                            for wip_item in tqdm(insert_staged, total=upload_size,
                                                  desc=f"INSERTING new {'SR' if isServer else 'RE'} "
                                                       f"WIP records in chunks"):
-                                cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
+                                cursor.execute(wip_item)
                         else:  # SQL upload for rack data
+                            # Stage the INSERT string instances
+                            staging_start = dt.now()
+                            print("Staging the RE WIP values in the background...")
+                            insert_staged = [insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False))
+                                             for wip_item in wip_values_chunked]
+                            print(f"Staging complete. T: {dt.now() - staging_start}")
                             insert_start = dt.now()
                             # Flags for process progress
                             nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 =\
                                 dime_8 = ninety = ninety_5 = True
                             print("\nRE WIP INSERT operation is running on the background. "
                                   "Progress will show intermittently\n")
-                            for index, wip_item in enumerate(wip_values_chunked):
-                                cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
-                                
+                            for index, wip_item in enumerate(insert_staged):
+                                cursor.execute(wip_item)
+
                                 # Progress feedback
                                 current_progress = (index + 1) / upload_size
                                 if ninety_5 and current_progress >= 0.95:
