@@ -357,7 +357,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             if isServerLevel:
                 for item in tqdm(datetime_list, total=len(datetime_list),
                                  desc=f"({index + 1}) Performing {'SR' if isServerLevel else 'RE'} "
-                                      f"working time dwell time calculation:"):
+                                      f"working time dwell time calculation"):
                     workTime_results.append(delta_working_hours(item[0], item[1], calendar=False))
             else:  # Progress for RE
                 print("RE WIP working time dwell time operation is running on the background. "
