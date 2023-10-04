@@ -361,7 +361,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
                                       f"working time dwell time calculation"):
                     workTime_results.append(delta_working_hours(item[0], item[1], calendar=False))
             else:  # Progress for RE
-                logger.info(f"({index + 1})RE WIP working time dwell time operation is running on the background...")
+                logger.info(f"({index + 1})RE WIP working time dwell time calculation is running on the background...")
                 calculation_start = dt.now()
                 workTime_results = [delta_working_hours(item[0], item[1], calendar=False) for item in datetime_list]
                 logger.info(f"\n({index + 1}) RE WIP working time dwell time calculation is complete. "
