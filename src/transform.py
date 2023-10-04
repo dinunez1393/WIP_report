@@ -201,6 +201,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
+    PARTITION_SIZE = 300_000
     cleaning_start = dt.now()
     counter = 0
     wip_list = []
@@ -251,7 +252,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
 
             cleaned_wip = ServerHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df)
             wip_list.extend(cleaned_wip.determine_processAndArea())
-            if len(wip_list) > 1_000_000:
+            if len(wip_list) > PARTITION_SIZE:
                 master_list.append(wip_list.copy())
                 wip_list.clear()
     else:  # Cleaning for Rack Level WIP
@@ -265,7 +266,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
 
             cleaned_wip = RackHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df)
             wip_list.extend(cleaned_wip.determine_processAndArea())
-            if len(wip_list) > 1_000_000:
+            if len(wip_list) > PARTITION_SIZE:
                 master_list.append(wip_list.copy())
                 wip_list.clear()
 
@@ -324,7 +325,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
 
     # Convert WIP list to a dataframe
     allocation_start = dt.now()
-    if 0 < len(wip_list) <= 1_000_000:  # Still append for wip_list less than 1 million
+    if 0 < len(wip_list) <= PARTITION_SIZE:  # Still append for wip_list less than 300 thousand
         master_list.append(wip_list.copy())
         wip_list.clear()
     wip_dfs_list = []
@@ -360,82 +361,11 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
                                       f"working time dwell time calculation"):
                     workTime_results.append(delta_working_hours(item[0], item[1], calendar=False))
             else:  # Progress for RE
-                print("RE WIP working time dwell time operation is running on the background. "
-                      "Progress will show intermittently")
-                iterations = len(datetime_list)
+                logger.info(f"({index + 1})RE WIP working time dwell time operation is running on the background...")
                 calculation_start = dt.now()
-                # Reset flags for process progress
-                nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = \
-                    quarter_3 = dime_8 = ninety = ninety_5 = True
-
-                for index_counter, item in enumerate(datetime_list):
-                    workTime_results.append(delta_working_hours(item[0], item[1], calendar=False))
-
-                    # Provide loop progress feedback for 5%, 10%, 20%, 25%, 30%, 40%, 50%, 60%, 75%, 80%, 90%, and 95%
-                    index_counter += 1
-                    current_progress = index_counter / iterations
-                    if ninety_5 and current_progress >= 0.95:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 95% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        ninety_5 = False
-                    elif ninety and current_progress >= 0.9:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 90% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        ninety = False
-                    elif dime_8 and current_progress >= 0.8:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 80% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        dime_8 = False
-                    elif quarter_3 and current_progress >= 0.75:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 75% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        quarter_3 = False
-                    elif dime_6 and current_progress >= 0.6:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 60% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        dime_6 = False
-                    elif half and current_progress >= 0.5:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 50% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        half = False
-                    elif dime_4 and current_progress >= 0.4:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 40% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        dime_4 = False
-                    elif dime_3 and current_progress >= 0.3:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 30% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        dime_3 = False
-                    elif quarter and current_progress >= 0.25:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 25% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        quarter = False
-                    elif dime_2 and current_progress >= 0.2:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 20% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        dime_2 = False
-                    elif dime and current_progress >= 0.1:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 10% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        dime = False
-                    elif nickel and current_progress >= 0.05:
-                        print(f"\n({index + 1}) RE WIP working time dwell time calculation at 5% "
-                              f"({iterations} items) "
-                              f"T: {dt.now() - calculation_start}")
-                        nickel = False
-                print(f"\n({index + 1}) RE WIP working time dwell time calculation at 100%. "
-                      f"Duration: {dt.now() - calculation_start}\n")
+                workTime_results = [delta_working_hours(item[0], item[1], calendar=False) for item in datetime_list]
+                logger.info(f"\n({index + 1}) RE WIP working time dwell time calculation is complete. "
+                            f"Duration: {dt.now() - calculation_start}\n")
 
             # Re-integrate to WIP dataframe
             wip_df['DwellTime_working'] = pd.Series(workTime_results)
