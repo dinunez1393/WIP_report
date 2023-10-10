@@ -71,16 +71,30 @@ if __name__ == '__main__':
         # Get all the raw data
         re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
 
-        # Get the latest WIP status to continue counting WIP from there - Disabled indefinitely
-        # latest_wip_status_df = select_wip_maxStatus(conn_sbi, isForUpdate=False)
+        # Given that the SR dataframe is very large, it is split into two, so that it feeds two cleaning threads
+        splitting_start = dt.now()
+        print("Splitting the SR dataframe in the background...")
+        sr_rawData_df_1, sr_rawData_df_2, sr_rawData_cats_1, sr_rawData_cats_2 = df_splitter(sr_rawData_df)
+        print(f"SR dataframe split complete. T: {dt.now() - splitting_start}")
+        splitting_start = dt.now()
+        print("Splitting the SR SAP dataframe in the background...")
+        sr_sap_statusH_df_1 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_1)]
+        sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
+        print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
 
         # Clean the data in threads and make a WIP report
         lock = threading.Lock()
-        thread_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df, sr_sap_statusH_df, lock, conn_sbi))
-        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, re_sap_statusH_df, lock, conn_sbi, False))
-        thread_sr.start()
+        thread_1_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df_1, sr_sap_statusH_df_1, lock, conn_sbi),
+                                       name="SR_Thr_1")
+        thread_2_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df_2, sr_sap_statusH_df_2, lock, conn_sbi),
+                                       name="SR_Thr_2")
+        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, re_sap_statusH_df, lock, conn_sbi, False),
+                                     name="RE_Thr_1")
+        thread_1_sr.start()
+        thread_2_sr.start()
         thread_re.start()
-        thread_sr.join()
+        thread_1_sr.join()
+        thread_2_sr.join()
         thread_re.join()
 
         # Update order type and factory status NULL values

@@ -8,6 +8,7 @@ from tqdm import tqdm
 import asyncio
 import logging
 from datetime import datetime as dt
+import threading
 
 
 async def get_raw_data(async_pool_asbuilt, conn_sbi):
@@ -29,6 +30,8 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
                                    select_ph_rackEoL_data(async_pool_asbuilt, wip_maxDate),
                                    select_sap_historicalStatus(async_pool_asbuilt, wip_maxDate))
     print(f"\nTOTAL extraction time: {dt.now() - extraction_start}")
+
+    allocation_start = dt.now()
     print("Data allocation is running in the background...")
 
     re_rawData_df, sr_rawData_df = results[0]
@@ -174,13 +177,12 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     sr_rawData_df = sr_rawData_df.drop_duplicates(subset=['TransID'])
     re_rawData_df = re_rawData_df.drop_duplicates(subset=['TransID'])
 
-    print(f"\nTOTAL raw data allocation time: {dt.now() - extraction_start}")
+    print(f"\nTOTAL raw data allocation time: {dt.now() - allocation_start}")
 
     return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
 
 
-def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServerLevel=True,
-               latest_wip_status_df=None):
+def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServerLevel=True):
     """
     Function that cleans the processed raw data to make a full WIP report
     :param rawData_df: dataframe containing product history raw data
@@ -191,9 +193,6 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     :type thread_lock: threading.Lock
     :param db_conn: The connection to the database
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
-    :param latest_wip_status_df: a dataframe containing the serial numbers in WIP table with their respective MAX
-    snapshot time - Disabled indefinitely
-    :type latest_wip_status_df: pandas.Dataframe
     :return: full WIP report
     :rtype: pandas.Dataframe
     """
@@ -217,19 +216,6 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
                    'ETL_time']  # 'isFrom_WIP' - Disabled indefinitely
     distinctSN_count = rawData_df['SerialNumber'].nunique()
 
-    # Disabled indefinitely
-    # # Eliminate serial numbers from WIP table that do not match the newest raw extract
-    # mask = latest_wip_status_df['SerialNumber'].isin(rawData_df['SerialNumber'])
-    # latest_wip_status_df = latest_wip_status_df[mask]
-    # latest_wip_status_df = latest_wip_status_df.drop(columns=['LatestUpdateDate'])
-    # latest_wip_status_df = latest_wip_status_df.rename(columns={'CheckpointID': 'CheckPointId',
-    #                                                             'CheckpointName': 'CheckPointName',
-    #                                                             'ProcessArea': 'Area',
-    #                                                             'TransactionID': 'TransID',
-    #                                                             'WIP_SnapshotDate': 'SnapshotTime',
-    #                                                             'ExtractionDate': 'ETL_time'})
-    # latest_wip_status_df['isFrom_WIP'] = 'isFrom_WIP'
-
     # Reindex the raw data and concatenate with existing data from WIP table
     rawData_df = rawData_df.reindex(columns=wip_columns)
     # rawData_df = pd.concat([rawData_df, latest_wip_status_df], ignore_index=True) - Disabled indefinitely
@@ -242,7 +228,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 = dime_8 = ninety = ninety_5 = True
 
     # Cleaning
-    if isServerLevel:  # Cleaning for Server Level WIP
+    if threading.current_thread().name == "SR_Thr_2":  # Cleaning for Server Level WIP - Thread 2
         for serialNumber, ph_instance_df in tqdm(ph_instances_grouped, desc="SR WIP cleaning operation progress"):
             # Get the SAP historical status data for this serial number
             try:
@@ -255,8 +241,9 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             if len(wip_list) > PARTITION_SIZE:
                 master_list.append(wip_list.copy())
                 wip_list.clear()
-    else:  # Cleaning for Rack Level WIP
-        print("RE WIP cleaning operation is running on the background. Progress will show intermittently")
+    else:  # Cleaning for Rack Level WIP and Server Level WIP - Thread 1
+        print(f"{'SR' if isServerLevel else 'RE'} WIP cleaning operation is running on the background. "
+              f"Progress will show intermittently")
         for serialNumber, ph_instance_df in ph_instances_grouped:
             # Get the SAP historical status data for this serial number
             try:
@@ -274,54 +261,55 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             counter += 1
             current_progress = counter / distinctSN_count
             if ninety_5 and current_progress >= 0.95:
-                print(f"\nRE WIP cleaning operation at 95% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 95% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 ninety_5 = False
             elif ninety and current_progress >= 0.9:
-                print(f"\nRE WIP cleaning operation at 90% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 90% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 ninety = False
             elif dime_8 and current_progress >= 0.8:
-                print(f"\nRE WIP cleaning operation at 80% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 80% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 dime_8 = False
             elif quarter_3 and current_progress >= 0.75:
-                print(f"\nRE WIP cleaning operation at 75% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 75% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 quarter_3 = False
             elif dime_6 and current_progress >= 0.6:
-                print(f"\nRE WIP cleaning operation at 60% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 60% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 dime_6 = False
             elif half and current_progress >= 0.5:
-                print(f"\nRE WIP cleaning operation at 50% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 50% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 half = False
             elif dime_4 and current_progress >= 0.4:
-                print(f"\nRE WIP cleaning operation at 40% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 40% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 dime_4 = False
             elif dime_3 and current_progress >= 0.3:
-                print(f"\nRE WIP cleaning operation at 30% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 30% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 dime_3 = False
             elif quarter and current_progress >= 0.25:
-                print(f"\nRE WIP cleaning operation at 25% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 25% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 quarter = False
             elif dime_2 and current_progress >= 0.2:
-                print(f"\nRE WIP cleaning operation at 20% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 20% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 dime_2 = False
             elif dime and current_progress >= 0.1:
-                print(f"\nRE WIP cleaning operation at 10% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 10% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 dime = False
             elif nickel and current_progress >= 0.05:
-                print(f"\nRE WIP cleaning operation at 5% ({distinctSN_count} items to clean) "
-                      f"T: {dt.now() - cleaning_start}")
+                print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 5% ({distinctSN_count} "
+                      f"items to clean) T: {dt.now() - cleaning_start}")
                 nickel = False
-        print(f"\nRE WIP cleaning operation at 100%. Duration: {dt.now() - cleaning_start}\n")
+        print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 100%. "
+              f"Duration: {dt.now() - cleaning_start}\n")
 
     # Convert WIP list to a dataframe
     allocation_start = dt.now()
@@ -351,20 +339,23 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             wip_df['DwellTime_calendar'] /= 3600
             logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} "
                         f"WIP: Calendar dwell time calculations complete. T: {dt.now() - time_tracker}")
+
             # For Working time dwell time calculation separate the datetime data first, then calculate dwell time,
             # then re-integrate the data back into the dataframe - this method results in lesser overhead
             datetime_list = list(zip(wip_df['TransactionDate'], wip_df['SnapshotTime']))
             workTime_results = []
-            if isServerLevel:
+            if threading.current_thread().name == "SR_Thr_2":  # Progress for SR - Thread 2
                 for item in tqdm(datetime_list, total=len(datetime_list),
                                  desc=f"({index + 1}) Performing {'SR' if isServerLevel else 'RE'} "
                                       f"working time dwell time calculation"):
                     workTime_results.append(delta_working_hours(item[0], item[1], calendar=False))
-            else:  # Progress for RE
-                logger.info(f"({index + 1})RE WIP working time dwell time calculation is running on the background...")
+            else:  # Progress for RE and SR - Thread 1
+                logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} WIP working time dwell time calculation "
+                            f"is running on the background...")
                 calculation_start = dt.now()
                 workTime_results = [delta_working_hours(item[0], item[1], calendar=False) for item in datetime_list]
-                logger.info(f"\n({index + 1}) RE WIP working time dwell time calculation is complete. "
+                logger.info(f"\n({index + 1}) {'SR' if isServerLevel else 'RE'} WIP working time dwell time "
+                            f"calculation is complete. "
                             f"Duration: {dt.now() - calculation_start}\n")
 
             # Re-integrate to WIP dataframe
@@ -398,13 +389,6 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     logger.info(f"INSERTING {'SR' if isServerLevel else 'RE'} WIP data - WARNING: This zone is locked ({dt.now()})")
     with thread_lock:
         load_wip_data(db_conn, final_wip_df, to_csv=False, isServer=isServerLevel)
-
-    # Disabled indefinitely
-    # # Store results
-    # if isServerLevel:
-    #     result_store[0] = final_wip_df
-    # else:
-    #     result_store[1] = final_wip_df
 
 
 def assign_shipmentStatus(db_conn):

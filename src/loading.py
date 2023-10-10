@@ -3,6 +3,7 @@ from tqdm import tqdm
 from alerts import *
 from datetime import datetime as dt
 import logging
+import threading
 import pandas as pd
 from utilities import show_message, items_to_SQL_values
 
@@ -27,7 +28,8 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
         wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
             ['DwellTime_calendar', 'DwellTime_working']].applymap(lambda x: format(x, '.7f'))
         print(f"Creating {'SR' if isServer else 'RE'} WIP .csv file in the background...")
-        wip_df.to_csv(f"../CleanedRecords_csv/wip_{'sr' if isServer else 're'}_records.csv", index=False)
+        wip_df.to_csv(f"../CleanedRecords_csv/wip_{'sr' if isServer else 're'}_records_"
+                      f"{'2' if threading.current_thread().name == 'SR_Thr_2' else '1'}.csv", index=False)
         print(f"CSV file for {'SR' if isServer else 'RE'} WIP created successfully\n")
     else:
         print("INSERT Process:\n")
@@ -101,72 +103,74 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                 with db_conn.cursor() as cursor:
                     if big_load:
                         upload_size = len(wip_values_chunked)
-                        if isServer:
+
+                        if threading.current_thread().name == "SR_Thr_2":  # SQL upload for SR data - Thread 2
                             for wip_item in tqdm(wip_values_chunked, total=upload_size,
                                                  desc=f"INSERTING new {'SR' if isServer else 'RE'} "
                                                       f"WIP records in chunks"):
                                 cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
-                        else:  # SQL upload for rack data
+                        else:  # SQL upload for RE data and SR data - Thread 1
                             insert_start = dt.now()
                             # Flags for process progress
                             nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 = \
                                 dime_8 = ninety = ninety_5 = True
-                            print("\nRE WIP INSERT operation is running on the background. "
-                                  "Progress will show intermittently\n")
+                            print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation is running on the background. "
+                                  f"Progress will show intermittently\n")
                             for index, wip_item in enumerate(wip_values_chunked):
                                 cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
 
                                 # Progress feedback
                                 current_progress = (index + 1) / upload_size
                                 if ninety_5 and current_progress >= 0.95:
-                                    print(f"\nRE WIP INSERT operation at 95% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 95% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     ninety_5 = False
                                 elif ninety and current_progress >= 0.9:
-                                    print(f"\nRE WIP INSERT operation at 90% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 90% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     ninety = False
                                 elif dime_8 and current_progress >= 0.8:
-                                    print(f"\nRE WIP INSERT operation at 80% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 80% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     dime_8 = False
                                 elif quarter_3 and current_progress >= 0.75:
-                                    print(f"\nRE WIP INSERT operation at 75% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 75% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     quarter_3 = False
                                 elif dime_6 and current_progress >= 0.6:
-                                    print(f"\nRE WIP INSERT operation at 60% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 60% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     dime_6 = False
                                 elif half and current_progress >= 0.5:
-                                    print(f"\nRE WIP INSERT operation at 50% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 50% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     half = False
                                 elif dime_4 and current_progress >= 0.4:
-                                    print(f"\nRE WIP INSERT operation at 40% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 40% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     dime_4 = False
                                 elif dime_3 and current_progress >= 0.3:
-                                    print(f"\nRE WIP INSERT operation at 30% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 30% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     dime_3 = False
                                 elif quarter and current_progress >= 0.25:
-                                    print(f"\nRE WIP INSERT operation at 25% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 25% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     quarter = False
                                 elif dime_2 and current_progress >= 0.2:
-                                    print(f"\nRE WIP INSERT operation at 20% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 20% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     dime_2 = False
                                 elif dime and current_progress >= 0.1:
-                                    print(f"\nRE WIP INSERT operation at 10% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 10% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     dime = False
                                 elif nickel and current_progress >= 0.05:
-                                    print(f"\nRE WIP INSERT operation at 5% ({upload_size} items) "
-                                          f"T: {dt.now() - insert_start}")
+                                    print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 5% "
+                                          f"({upload_size} items) T: {dt.now() - insert_start}")
                                     nickel = False
-                            print(f"\nRE WIP INSERT operation at 100%. Duration: {dt.now() - insert_start}\n")
+                            print(f"\n{'SR' if isServer else 'RE'} WIP INSERT operation at 100%. "
+                                  f"Duration: {dt.now() - insert_start}\n")
 
                         # Insert remaining values
                         if len(wip_remaining) > 0:

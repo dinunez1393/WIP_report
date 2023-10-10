@@ -159,3 +159,22 @@ def items_to_SQL_values(collection, isForUpdate=True, chunk_size=1_000):
                           "'{}', '{}', '{}', {}, {}, '{}'),"
         sql_values_str *= chunk_size
     return sql_values_str.format(*collection)[:-1]  # Omit the last comma
+
+
+def df_splitter(dataframe, category_name='SerialNumber'):
+    """
+    Function splits a dataframe by category into two (40%-60%)
+    :param dataframe: The dataframe to be split into two
+    :type dataframe: pandas.Dataframe
+    :param category_name: The column name of the category to use for the splitting
+    :return: a tuple containing two dataframes, and two lists. The list contain the unique categories of each new DF
+    :rtype: tuple
+    """
+    unique_categories = list(set(dataframe[category_name]))
+    partition_point = int(len(unique_categories) * 0.4)
+    division_1 = unique_categories[:partition_point]
+    division_2 = unique_categories[partition_point:]
+    new_df_1 = dataframe[dataframe[category_name].isin(division_1)]
+    new_df_2 = dataframe[dataframe[category_name].isin(division_2)]
+
+    return new_df_1, new_df_2, division_1, division_2
