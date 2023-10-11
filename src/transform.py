@@ -202,6 +202,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
 
     PARTITION_SIZE = 300_000
     cleaning_start = dt.now()
+    unit_todayNow = dt.now()
     counter = 0
     wip_list = []
     master_list = []
@@ -236,7 +237,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             except KeyError:
                 sap_historicalStatus_df = None
 
-            cleaned_wip = ServerHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df)
+            cleaned_wip = UnitHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df, unit_todayNow)
             wip_list.extend(cleaned_wip.determine_processAndArea())
             if len(wip_list) > PARTITION_SIZE:
                 master_list.append(wip_list.copy())
@@ -251,7 +252,8 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             except KeyError:
                 sap_historicalStatus_df = None
 
-            cleaned_wip = RackHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df)
+            cleaned_wip = UnitHistory(ph_instance_df.reset_index(drop=True), sap_historicalStatus_df, unit_todayNow,
+                                      isServerLevel)
             wip_list.extend(cleaned_wip.determine_processAndArea())
             if len(wip_list) > PARTITION_SIZE:
                 master_list.append(wip_list.copy())
