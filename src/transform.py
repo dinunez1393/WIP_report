@@ -339,27 +339,12 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
             wip_df['DwellTime_calendar'] /= 3600
             logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} "
                         f"WIP: Calendar dwell time calculations complete. T: {dt.now() - time_tracker}")
-
-            # For Working time dwell time calculation separate the datetime data first, then calculate dwell time,
-            # then re-integrate the data back into the dataframe - this method results in lesser overhead
-            datetime_list = list(zip(wip_df['TransactionDate'], wip_df['SnapshotTime']))
-            workTime_results = []
-            if threading.current_thread().name == "SR_Thr_2":  # Progress for SR - Thread 2
-                for item in tqdm(datetime_list, total=len(datetime_list),
-                                 desc=f"({index + 1}) Performing {'SR' if isServerLevel else 'RE'} "
-                                      f"working time dwell time calculation"):
-                    workTime_results.append(delta_working_hours(item[0], item[1], calendar=False))
-            else:  # Progress for RE and SR - Thread 1
-                logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} WIP working time dwell time calculation "
-                            f"is running on the background...")
-                calculation_start = dt.now()
-                workTime_results = [delta_working_hours(item[0], item[1], calendar=False) for item in datetime_list]
-                logger.info(f"\n({index + 1}) {'SR' if isServerLevel else 'RE'} WIP working time dwell time "
-                            f"calculation is complete. "
-                            f"Duration: {dt.now() - calculation_start}\n")
-
-            # Re-integrate to WIP dataframe
-            wip_df['DwellTime_working'] = pd.Series(workTime_results)
+            time_tracker = dt.now()
+            wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
+                                                                                       row['SnapshotTime'],
+                                                                                       calendar=False), axis=1)
+            logger.info(f"({index + 1}) {'SR' if isServerLevel else 'RE'} "
+                        f"WIP: Working time dwell time calculations complete. T: {dt.now() - time_tracker}")
 
             # Assign the process areas
             for area, checkpoint_ids in tqdm(areas.items(), total=len(areas),
