@@ -219,7 +219,6 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
 
     # Reindex the raw data and concatenate with existing data from WIP table
     rawData_df = rawData_df.reindex(columns=wip_columns)
-    # rawData_df = pd.concat([rawData_df, latest_wip_status_df], ignore_index=True) - Disabled indefinitely
 
     # Group the product history raw data and the SAP historical status data by Serial Number
     ph_instances_grouped = rawData_df.groupby('SerialNumber')
@@ -324,9 +323,6 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     for index, wip_list in enumerate(master_list):
         time_tracker = dt.now()
         wip_df = pd.DataFrame(wip_list, columns=wip_columns)
-
-        # Drop the temporary column 'isFrom_WIP' - Disabled indefinitely
-        # wip_df = wip_df.drop(columns=['isFrom_WIP'])
 
         logger.info(f"({index + 1}) Initialized the {'SR' if isServerLevel else 'RE'} WIP dataframe from the tuples. "
                     f"T: {dt.now() - time_tracker}")

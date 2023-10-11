@@ -25,7 +25,6 @@ class UnitHistory:
         self.checkpoints_df = checkpoints_df
         self.sap_historicalStatus_df = sap_historicalStatus_df
         self.today_now = today_now
-        self.isServer = isServer
         if isServer:
             self.shipmentCkps = {300, 301, 302}
             self.criticalCkps = {100, 101, 200, 235, 254, 208, 252, 150, 170, 216, 218, 260, 243, 2470, 228, 270, 230,
