@@ -346,11 +346,11 @@ def select_wip_maxStatus(db_conn, isForUpdate=True):
     :rtype: pandas.Dataframe
     """
     query = f"""
-        --SELECTS All the MAX SN, TransactionDate pairs that have a NotShipped status flag = True
+        --SELECTS All the MAX SN, TransactionDate pairs that have a Not Shipped (Packed is Last status flag = False)
         WITH maxTransT_CTE AS (
             SELECT SerialNumber, MAX([TransactionDate]) AS MaxTransactionDate
             FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
-            {'' if isForUpdate else '--'}WHERE [NotShippedTransaction_flag] = 1
+            {'' if isForUpdate else '--'}WHERE [PackedIsLast_flag] = 0
             GROUP BY SerialNumber
         )
         --SELECTS All Columns of all units MAX transaction date that have a NotShipped status flag = True

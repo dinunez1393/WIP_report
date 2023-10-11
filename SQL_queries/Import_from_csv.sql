@@ -15,7 +15,7 @@ SELECT [Site]
       ,[OrderType]
       ,[FactoryStatus]
 	  ,[ProductType]
-      ,[NotShippedTransaction_flag]
+      ,[PackedIsLast_flag]
       ,[ExtractionDate]
       ,[LatestUpdateDate]
  FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
@@ -38,7 +38,7 @@ SELECT [Site]
       ,[OrderType]
       ,[FactoryStatus]
 	  ,[ProductType]
-      ,[NotShippedTransaction_flag]
+      ,[PackedIsLast_flag]
       ,[ExtractionDate]
   )
   SELECT [Site]
@@ -57,6 +57,6 @@ SELECT [Site]
       ,[OrderType]
       ,[FactoryStatus]
 	  ,[ProductType]
-	  ,CAST([NotShippedTransaction_flag] AS bit)
+	  ,CAST([PackedIsLast_flag] AS bit)
       ,CAST([ETL_time] AS datetime)
   FROM [SBILearning].[dbo].[wip_sr_records];

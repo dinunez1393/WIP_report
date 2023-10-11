@@ -49,7 +49,7 @@ def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
             )
         
             UPDATE o
-            SET o.[NotShippedTransaction_flag] = 0,
+            SET o.[PackedIsLast_flag] = 1,
                 o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
             FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS o
             JOIN SerialNumber_CTE AS u
@@ -66,7 +66,7 @@ def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
             )
         
             UPDATE o
-            SET o.[NotShippedTransaction_flag] = 1,
+            SET o.[PackedIsLast_flag] = 0,
                 o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
             FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS o
             JOIN SerialNumber_CTE AS u

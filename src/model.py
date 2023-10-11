@@ -69,13 +69,13 @@ class ServerHistory:
                     actual_upperBoundary = fixed_date(max_timestamp) + timedelta(days=1)
                 else:
                     actual_upperBoundary = fixed_date(max_timestamp)
-                notShippedTransaction_flag = False
+                PackedIsLast_flag = True
             elif today_upperBoundary > max_timestamp:
                 actual_upperBoundary = today_upperBoundary
-                notShippedTransaction_flag = True
+                PackedIsLast_flag = False
             else:
                 actual_upperBoundary = fixed_date(max_timestamp)
-                notShippedTransaction_flag = True
+                PackedIsLast_flag = False
 
             # Disabled indefinitely
             # # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
@@ -117,7 +117,7 @@ class ServerHistory:
                 transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
                 # Assign shipment status
-                location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
+                location_row['PackedIsLast_flag'] = PackedIsLast_flag
                 location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
@@ -188,13 +188,13 @@ class RackHistory:
                     actual_upperBoundary = fixed_date(max_timestamp) + timedelta(days=1)
                 else:
                     actual_upperBoundary = fixed_date(max_timestamp)
-                notShippedTransaction_flag = False
+                PackedIsLast_flag = True
             elif today_upperBoundary > max_timestamp:
                 actual_upperBoundary = today_upperBoundary
-                notShippedTransaction_flag = True
+                PackedIsLast_flag = False
             else:
                 actual_upperBoundary = fixed_date(max_timestamp)
-                notShippedTransaction_flag = True
+                PackedIsLast_flag = False
 
             # Disabled indefinitely
             # # Find the lower boundary. Take the actual minimum timestamp if it is a new instance. Else, add one day
@@ -236,7 +236,7 @@ class RackHistory:
                 transaction_timestamp = location_row['TransactionDate']
                 location_row['SnapshotTime'] = current_date
                 # Assign shipment status
-                location_row['NotShippedTransaction_flag'] = notShippedTransaction_flag
+                location_row['PackedIsLast_flag'] = PackedIsLast_flag
                 location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)

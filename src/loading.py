@@ -36,8 +36,8 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
 
         wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
             ['DwellTime_calendar', 'DwellTime_working']].applymap(lambda x: format(x, '.7f'))
-        wip_df[['NotShippedTransaction_flag', 'PackedPreviously_flag']] = \
-            wip_df[['NotShippedTransaction_flag', 'PackedPreviously_flag']].astype(int)
+        wip_df[['PackedIsLast_flag', 'PackedPreviously_flag']] = \
+            wip_df[['PackedIsLast_flag', 'PackedPreviously_flag']].astype(int)
         wip_df = wip_df.fillna('NULL')
         # Convert dataframe to tuples
         cleaned_wip_list = [tuple(row) for _, row in wip_df.iterrows()]
@@ -91,7 +91,7 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                       ,[OrderType]
                       ,[FactoryStatus]
                       ,[ProductType]
-                      ,[NotShippedTransaction_flag]
+                      ,[PackedIsLast_flag]
                       ,[PackedPreviously_flag]
                       ,[ExtractionDate]
                     )
