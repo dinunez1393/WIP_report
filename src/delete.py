@@ -47,6 +47,7 @@ def delete_allData(db_conn):
     query = "DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]";
 
     try:
+        delete_start = dt.now()
         with db_conn.cursor() as cursor:
             print("Deleting all data...")
             cursor.execute(query)
@@ -56,4 +57,4 @@ def delete_allData(db_conn):
         show_message(AlertType.FAILED)
     else:
         db_conn.commit()
-        print(f"WIP table has been cleared\n")
+        print(f"WIP table has been cleared\nT: {dt.now() - delete_start}\n")
