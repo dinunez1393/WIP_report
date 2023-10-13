@@ -11,6 +11,7 @@ from utilities import *
 import asyncio
 import logging
 import threading
+import gc
 
 
 SERVER_NAME_sbi = 'WQMSDEV01'
@@ -82,6 +83,10 @@ if __name__ == '__main__':
         sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
         print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
 
+        # De-allocate memory for unreferenced data structures at this point
+        del sr_rawData_df, sr_sap_statusH_df
+        gc.collect()
+
         # Clean the data in threads and make a WIP report
         lock = threading.Lock()
         thread_1_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df_1, sr_sap_statusH_df_1, lock, conn_sbi),
@@ -96,6 +101,10 @@ if __name__ == '__main__':
         thread_1_sr.join()
         thread_2_sr.join()
         thread_re.join()
+
+        # De-allocate memory for unreferenced data structures at this point
+        del sr_rawData_df_1, sr_rawData_df_2, sr_sap_statusH_df_1, sr_sap_statusH_df_2, re_rawData_df, re_sap_statusH_df
+        gc.collect()
 
         # Update order type and factory status NULL values
         update_orderType_factoryStatus(conn_sbi)

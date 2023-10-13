@@ -124,6 +124,7 @@ def update_orderType_factoryStatus(db_conn):
                     END;    
     """
     try:
+        update_start = dt.now()
         with db_conn.cursor() as cursor:
             print("Updating Order Type and Factory status NULL values in the background...")
             cursor.execute(update_query)
@@ -133,4 +134,4 @@ def update_orderType_factoryStatus(db_conn):
         show_message(AlertType.FAILED)
     else:
         db_conn.commit()
-        print("\nUPDATE operation ran successfully\n")
+        print(f"\nUPDATE operation ran successfully\nT: {dt.now() - update_start}\n")

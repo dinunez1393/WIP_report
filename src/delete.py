@@ -24,6 +24,7 @@ def delete_oldData(db_conn):
     """
 
     try:
+        delete_start = dt.now()
         with db_conn.cursor() as cursor:
             print("Deleting old data...")
             cursor.execute(query)
@@ -33,7 +34,8 @@ def delete_oldData(db_conn):
         show_message(AlertType.FAILED)
     else:
         db_conn.commit()
-        print(f"WIP data prior to {dt.now() - timedelta(days=185)} has been deleted successfully\n")
+        print(f"WIP data prior to {dt.now() - timedelta(days=185)} has been deleted successfully\n"
+              f"T: {dt.now() - delete_start}\n")
 
 
 def delete_allData(db_conn):

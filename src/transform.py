@@ -9,6 +9,7 @@ import asyncio
 import logging
 from datetime import datetime as dt
 import threading
+import gc
 
 
 async def get_raw_data(async_pool_asbuilt, conn_sbi):
@@ -312,6 +313,10 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
         print(f"\n{'SR' if isServerLevel else 'RE'} WIP cleaning operation at 100%. "
               f"Duration: {dt.now() - cleaning_start}\n")
 
+    # De-allocate memory for unreferenced data structures at this point
+    del rawData_df, sap_historicalStatus_df
+    gc.collect()
+
     # Convert WIP list to a dataframe
     allocation_start = dt.now()
     if 0 < len(wip_list) <= PARTITION_SIZE:  # Still append for wip_list less than 300 thousand
@@ -360,6 +365,10 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
 
             wip_dfs_list.append(wip_df.copy())
 
+    # De-allocate memory for unreferenced data structures at this point
+    del master_list
+    gc.collect()
+
     if len(wip_dfs_list) < 1:
         final_wip_df = pd.DataFrame([], columns=wip_columns)  # Dummy DF to avoid producing an error
     else:
@@ -368,10 +377,18 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     print(f"Cleaned {'SR' if isServerLevel else 'RE'} WIP data allocation completed successfully in "
           f"{dt.now() - allocation_start}\n")
 
+    # De-allocate memory for unreferenced data structures at this point
+    del wip_dfs_list
+    gc.collect()
+
     # Load results
     logger.info(f"INSERTING {'SR' if isServerLevel else 'RE'} WIP data - WARNING: This zone is locked ({dt.now()})")
     with thread_lock:
         load_wip_data(db_conn, final_wip_df, to_csv=False, isServer=isServerLevel)
+
+    # De-allocate memory for unreferenced data structures at this point
+    del final_wip_df
+    gc.collect()
 
 
 def assign_shipmentStatus(db_conn):

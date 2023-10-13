@@ -4,6 +4,7 @@ from alerts import *
 from datetime import datetime as dt
 import logging
 import threading
+import gc
 import pandas as pd
 from utilities import show_message, items_to_SQL_values
 
@@ -100,6 +101,7 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
             """
             # INSERT new records into DB
             try:
+                insert_start = dt.now()
                 with db_conn.cursor() as cursor:
                     if big_load:
                         upload_size = len(wip_values_chunked)
@@ -189,7 +191,10 @@ def load_wip_data(db_conn, wip_df, to_csv=False, isServer=True):
                 show_message(AlertType.FAILED)
             else:
                 db_conn.commit()
-                print("\nINSERT Operation ran successfully\n")
+                # De-allocate memory for unreferenced data structures at this point
+                del wip_df, wip_values_chunked, wip_values_listItem, wip_remaining, wip_values_remaining, wip_values
+                gc.collect()
+                print(f"\nINSERT Operation ran successfully\nT: {dt.now() - insert_start}\n")
         # If no new records in server_dw_list
         else:
             print("\nNo new records to INSERT\n")
