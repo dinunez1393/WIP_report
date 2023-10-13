@@ -5,7 +5,9 @@ from extraction import select_wip_maxStatus
 from loading import *
 from update import *
 from delete import *
+from datetime import datetime as dt
 import warnings
+import time as ti
 import pandas as pd
 from utilities import *
 import asyncio
@@ -98,13 +100,16 @@ if __name__ == '__main__':
         thread_1_sr.start()
         thread_2_sr.start()
         thread_re.start()
+
+        # De-allocate memory for unreferenced data structures well beyond their reference point
+        print(f"Memory de-allocation in 10 minutes from now: {dt.now()}")
+        ti.sleep(601)
+        del sr_rawData_df_1, sr_rawData_df_2, sr_sap_statusH_df_1, sr_sap_statusH_df_2, re_rawData_df, re_sap_statusH_df
+        gc.collect()
+
         thread_1_sr.join()
         thread_2_sr.join()
         thread_re.join()
-
-        # De-allocate memory for unreferenced data structures at this point
-        del sr_rawData_df_1, sr_rawData_df_2, sr_sap_statusH_df_1, sr_sap_statusH_df_2, re_rawData_df, re_sap_statusH_df
-        gc.collect()
 
         # Update order type and factory status NULL values
         update_orderType_factoryStatus(conn_sbi)

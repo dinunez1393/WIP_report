@@ -225,6 +225,10 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
     ph_instances_grouped = rawData_df.groupby('SerialNumber')
     sap_statusH_grouped = sap_historicalStatus_df.groupby('SerialNumber')
 
+    # De-allocate memory for unreferenced data structures at this point
+    del rawData_df, sap_historicalStatus_df
+    gc.collect()
+
     # Flags for process progress
     nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 = dime_8 = ninety = ninety_5 = True
 
@@ -314,7 +318,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, thread_lock, db_conn, isServ
               f"Duration: {dt.now() - cleaning_start}\n")
 
     # De-allocate memory for unreferenced data structures at this point
-    del rawData_df, sap_historicalStatus_df
+    del ph_instances_grouped, sap_statusH_grouped
     gc.collect()
 
     # Convert WIP list to a dataframe
