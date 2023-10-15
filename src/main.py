@@ -7,12 +7,11 @@ from update import *
 from delete import *
 from datetime import datetime as dt
 import warnings
-import time as ti
 import pandas as pd
 from utilities import *
 import asyncio
 import logging
-import threading
+import multiprocessing
 import gc
 
 
@@ -74,42 +73,46 @@ if __name__ == '__main__':
         # Get all the raw data
         re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
 
-        # Given that the SR dataframe is very large, it is split into two, so that it feeds two cleaning threads
+        # Given that the SR dataframe is very large, it is split into three, so that it feeds three cleaning processes
         splitting_start = dt.now()
         print("Splitting the SR dataframe in the background...")
-        sr_rawData_df_1, sr_rawData_df_2, sr_rawData_cats_1, sr_rawData_cats_2 = df_splitter(sr_rawData_df)
+        sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_cats_1, sr_rawData_cats_2, sr_rawData_cats_3 = \
+            df_splitter(sr_rawData_df)
         print(f"SR dataframe split complete. T: {dt.now() - splitting_start}")
         splitting_start = dt.now()
         print("Splitting the SR SAP dataframe in the background...")
         sr_sap_statusH_df_1 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_1)]
         sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
+        sr_sap_statusH_df_3 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_3)]
         print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
 
-        # De-allocate memory for unreferenced data structures at this point
-        del sr_rawData_df, sr_sap_statusH_df
+        # Clean the data in multiple processes and make a WIP report
+        lock = multiprocessing.Lock()
+        process_1_sr = multiprocessing.Process(target=assign_wip,
+                                               args=(sr_rawData_df_1.copy(), sr_sap_statusH_df_1.copy(), lock),
+                                               name="SR_Pro_1")
+        process_2_sr = multiprocessing.Process(target=assign_wip,
+                                               args=(sr_rawData_df_2.copy(), sr_sap_statusH_df_2.copy(), lock),
+                                               name="SR_Pro_2")
+        process_3_sr = multiprocessing.Process(target=assign_wip,
+                                               args=(sr_rawData_df_3.copy(), sr_sap_statusH_df_3.copy(), lock),
+                                               name="SR_Pro_3")
+        process_re = multiprocessing.Process(target=assign_wip, args=(re_rawData_df.copy(), re_sap_statusH_df.copy(),
+                                                                      lock, False), name="RE_Pro")
+        # Free up memory
+        del sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_cats_1, sr_rawData_cats_2, sr_rawData_cats_3,\
+            re_rawData_df, re_sap_statusH_df, sr_rawData_df, sr_sap_statusH_df
         gc.collect()
 
-        # Clean the data in threads and make a WIP report
-        lock = threading.Lock()
-        thread_1_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df_1, sr_sap_statusH_df_1, lock, conn_sbi),
-                                       name="SR_Thr_1")
-        thread_2_sr = threading.Thread(target=assign_wip, args=(sr_rawData_df_2, sr_sap_statusH_df_2, lock, conn_sbi),
-                                       name="SR_Thr_2")
-        thread_re = threading.Thread(target=assign_wip, args=(re_rawData_df, re_sap_statusH_df, lock, conn_sbi, False),
-                                     name="RE_Thr_1")
-        thread_1_sr.start()
-        thread_2_sr.start()
-        thread_re.start()
+        process_1_sr.start()
+        process_2_sr.start()
+        process_3_sr.start()
+        process_re.start()
 
-        # De-allocate memory for unreferenced data structures well beyond their reference point
-        print(f"Memory de-allocation in 10 minutes from now: {dt.now()}")
-        ti.sleep(601)
-        del sr_rawData_df_1, sr_rawData_df_2, sr_sap_statusH_df_1, sr_sap_statusH_df_2, re_rawData_df, re_sap_statusH_df
-        gc.collect()
-
-        thread_1_sr.join()
-        thread_2_sr.join()
-        thread_re.join()
+        process_1_sr.join()
+        process_2_sr.join()
+        process_3_sr.join()
+        process_re.join()
 
         # Update order type and factory status NULL values
         update_orderType_factoryStatus(conn_sbi)
