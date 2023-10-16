@@ -107,7 +107,7 @@ class UnitHistory:
                     current_date = current_date + timedelta(days=1)
                     continue
                 # Get the row that has the current location of this current instance
-                location_row = day_ckps_df.iloc[0]
+                location_row = day_ckps_df.iloc[0].copy()  # Recommendation by pandas warning system to use copy() here
                 # Get the SAP status for this WIP snapshot date (current_date)
                 if sap_exists:
                     current_historicalStatus_df = \
@@ -115,12 +115,12 @@ class UnitHistory:
                             self.sap_historicalStatus_df['EXTRACTED_DATE_TIME'] <= current_date]
                     if current_historicalStatus_df.shape[0] > 0:
                         current_status = current_historicalStatus_df['STATUS'].iloc[0]
-                        location_row['FactoryStatus'] = current_status
-                transaction_timestamp = location_row['TransactionDate']
-                location_row['SnapshotTime'] = current_date
+                        location_row.loc['FactoryStatus'] = current_status
+                transaction_timestamp = location_row.loc['TransactionDate']
+                location_row.loc['SnapshotTime'] = current_date
                 # Assign shipment status
-                location_row['PackedIsLast_flag'] = PackedIsLast_flag
-                location_row['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
+                location_row.loc['PackedIsLast_flag'] = PackedIsLast_flag
+                location_row.loc['PackedPreviously_flag'] = least_packingDate < transaction_timestamp
                 # Add the WIP instance to the WIP history
                 location_row_tuple = tuple(location_row)
                 wipHistory_tuples.append(location_row_tuple)

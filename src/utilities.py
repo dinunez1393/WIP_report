@@ -172,7 +172,7 @@ def df_splitter(dataframe, category_name='SerialNumber'):
     :rtype: tuple
     """
     unique_categories = list(set(dataframe[category_name]))
-    partition_sizes = (int(len(unique_categories) * 0.25), int(len(unique_categories) * 0.40))
+    partition_sizes = (int(len(unique_categories) * 0.25), int(len(unique_categories) * 0.65))
     division_1 = unique_categories[:partition_sizes[0]]
     division_2 = unique_categories[partition_sizes[0]: partition_sizes[1]]
     division_3 = unique_categories[partition_sizes[1]:]

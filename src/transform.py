@@ -350,7 +350,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, process_lock, isServerLevel=
 
             # Convert python Datetime(s) to SQL Datetime
             time_tracker = dt.now()
-            wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
+            wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].map(
                 datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
             logger.info(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
