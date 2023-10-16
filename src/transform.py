@@ -343,7 +343,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, process_lock, isServerLevel=
                         f"WIP: Working time dwell time calculations complete. T: {dt.now() - time_tracker}")
 
             # Assign the process areas
-            wip_df['Area'] = wip_df['Area'].astype(object)
+            wip_df['Area'] = wip_df['Area'].astype(object)  # Explicitly cast column before assignment (pandas r.)
             for area, checkpoint_ids in tqdm(areas.items(), total=len(areas),
                                              desc=f"({index + 1}) Assigning the "
                                                   f"({pro_num}){'SR' if isServerLevel else 'RE'} process areas"):
