@@ -88,15 +88,15 @@ if __name__ == '__main__':
         # Clean the data in multiple processes and make a WIP report
         lock = multiprocessing.Lock()
         process_1_sr = multiprocessing.Process(target=assign_wip,
-                                               args=(sr_rawData_df_1.copy(), sr_sap_statusH_df_1.copy(), lock),
+                                               args=(sr_rawData_df_1, sr_sap_statusH_df_1, lock),
                                                name="SR_Pro_1")
         process_2_sr = multiprocessing.Process(target=assign_wip,
-                                               args=(sr_rawData_df_2.copy(), sr_sap_statusH_df_2.copy(), lock),
+                                               args=(sr_rawData_df_2, sr_sap_statusH_df_2, lock),
                                                name="SR_Pro_2")
         process_3_sr = multiprocessing.Process(target=assign_wip,
-                                               args=(sr_rawData_df_3.copy(), sr_sap_statusH_df_3.copy(), lock),
+                                               args=(sr_rawData_df_3, sr_sap_statusH_df_3, lock),
                                                name="SR_Pro_3")
-        process_re = multiprocessing.Process(target=assign_wip, args=(re_rawData_df.copy(), re_sap_statusH_df.copy(),
+        process_re = multiprocessing.Process(target=assign_wip, args=(re_rawData_df, re_sap_statusH_df,
                                                                       lock, False), name="RE_Pro")
         process_1_sr.start()
         process_2_sr.start()
