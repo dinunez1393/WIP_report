@@ -343,6 +343,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, process_lock, isServerLevel=
                         f"WIP: Working time dwell time calculations complete. T: {dt.now() - time_tracker}")
 
             # Assign the process areas
+            wip_df['Area'] = wip_df['Area'].astype(object)
             for area, checkpoint_ids in tqdm(areas.items(), total=len(areas),
                                              desc=f"({index + 1}) Assigning the "
                                                   f"({pro_num}){'SR' if isServerLevel else 'RE'} process areas"):
@@ -350,7 +351,7 @@ def assign_wip(rawData_df, sap_historicalStatus_df, process_lock, isServerLevel=
 
             # Convert python Datetime(s) to SQL Datetime
             time_tracker = dt.now()
-            wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].map(
+            wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
                 datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
             logger.info(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
