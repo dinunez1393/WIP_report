@@ -207,15 +207,8 @@ def assign_wip(process_lock, isServerLevel=True):
     # Import raw data
     import_start = dt.now()
     print(f"({pro_num}) Importing raw data\n")
-    rawData_df = pd.read_csv(f"CleanedRecords_csv/wip_rawData_p{pro_num}",
-                             dtype={'SerialNumber': str,
-                                    'StringField1': str,
-                                    'CheckPointId': int,
-                                    'Success': bool,
-                                    'TransID': int},
-                             parse_dates=['TransactionDate'])
-    sap_historicalStatus_df = pd.read_csv(f"CleanedRecords_csv/sap_historyData_p{pro_num}",
-                                          dtype={'SerialNumber': str}, parse_dates=['EXTRACTED_DATE_TIME'])
+    rawData_df = pd.read_hdf(f"CleanedRecords_csv/wip_rawData_p{pro_num}.h5", key='data')
+    sap_historicalStatus_df = pd.read_hdf(f"CleanedRecords_csv/sap_historyData_p{pro_num}.h5", key='data')
     print(f"({pro_num}) Raw data import is complete. T: {dt.now() - import_start}")
 
     PARTITION_SIZE = 300_000
