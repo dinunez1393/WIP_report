@@ -182,14 +182,10 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
 
 
-def assign_wip(rawData_df, sap_historicalStatus_df, process_lock, isServerLevel=True):
+def assign_wip(process_lock, isServerLevel=True):
     """
     Function that cleans the processed raw data to make a full WIP report and uses another function to
      export the cleaned data to SQL or CSV
-    :param rawData_df: dataframe containing product history raw data
-    :type rawData_df: pandas.Dataframe
-    :param sap_historicalStatus_df: A dataframe containing SAP historical status data
-    :type sap_historicalStatus_df: pandas.Dataframe
     :param process_lock: A lock for the thread that will be used to upload the data to SQL
     :type process_lock: threading.Lock
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
@@ -197,6 +193,30 @@ def assign_wip(rawData_df, sap_historicalStatus_df, process_lock, isServerLevel=
     # Logger variables
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
+
+    # Process number
+    if multiprocessing.current_process().name == "SR_Pro_1":
+        pro_num = 1
+    elif multiprocessing.current_process().name == "SR_Pro_2":
+        pro_num = 2
+    elif multiprocessing.current_process().name == "SR_Pro_3":
+        pro_num = 3
+    else:  # RE Process
+        pro_num = 4
+
+    # Import raw data
+    import_start = dt.now()
+    print(f"({pro_num}) Importing raw data\n")
+    rawData_df = pd.read_csv(f"CleanedRecords_csv/wip_rawData_p{pro_num}",
+                             dtype={'SerialNumber': str,
+                                    'StringField1': str,
+                                    'CheckPointId': int,
+                                    'Success': bool,
+                                    'TransID': int},
+                             parse_dates=['TransactionDate'])
+    sap_historicalStatus_df = pd.read_csv(f"CleanedRecords_csv/sap_historyData_p{pro_num}",
+                                          dtype={'SerialNumber': str}, parse_dates=['EXTRACTED_DATE_TIME'])
+    print(f"({pro_num}) Raw data import is complete. T: {dt.now() - import_start}")
 
     PARTITION_SIZE = 300_000
     cleaning_start = dt.now()
@@ -214,16 +234,6 @@ def assign_wip(rawData_df, sap_historicalStatus_df, process_lock, isServerLevel=
                    'ProductType', 'PackedIsLast_flag', 'PackedPreviously_flag',
                    'ETL_time']  # 'isFrom_WIP' - Disabled indefinitely
     distinctSN_count = rawData_df['SerialNumber'].nunique()
-
-    # Process number
-    if multiprocessing.current_process().name == "SR_Pro_1":
-        pro_num = 1
-    elif multiprocessing.current_process().name == "SR_Pro_2":
-        pro_num = 2
-    elif multiprocessing.current_process().name == "SR_Pro_3":
-        pro_num = 3
-    else:  # RE Process
-        pro_num = ""
 
     # Reindex the raw data and concatenate with existing data from WIP table
     rawData_df = rawData_df.reindex(columns=wip_columns)

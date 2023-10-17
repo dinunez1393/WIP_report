@@ -1,7 +1,7 @@
 from transform import *
 from db_conn import *
 from alerts import *
-from extraction import select_wip_maxStatus
+from extraction import select_wipTable_count
 from loading import *
 from update import *
 from delete import *
@@ -66,50 +66,63 @@ if __name__ == '__main__':
         # Supress all warning messages
         warnings.simplefilter("ignore")
 
-        # Clear WIP table for fresh upload
-        delete_allData(conn_sbi)
+        # Check if the WIP table is empty
+        wip_count = select_wipTable_count(conn_sbi)
 
-        # Get all the raw data
-        re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
+        if wip_count > 0:  # Perform raw data extraction
+            # Clear WIP table for fresh upload
+            delete_allData(conn_sbi)
 
-        # Given that the SR dataframe is very large, it is split into three, so that it feeds three cleaning processes
-        splitting_start = dt.now()
-        print("Splitting the SR dataframe in the background...")
-        sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_cats_1, sr_rawData_cats_2, sr_rawData_cats_3 = \
-            df_splitter(sr_rawData_df)
-        print(f"SR dataframe split complete. T: {dt.now() - splitting_start}")
-        splitting_start = dt.now()
-        print("Splitting the SR SAP dataframe in the background...")
-        sr_sap_statusH_df_1 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_1)]
-        sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
-        sr_sap_statusH_df_3 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_3)]
-        print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
+            # Get all the raw data
+            re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
 
-        # Clean the data in multiple processes and make a WIP report
-        lock = multiprocessing.Lock()
-        process_1_sr = multiprocessing.Process(target=assign_wip,
-                                               args=(sr_rawData_df_1, sr_sap_statusH_df_1, lock),
-                                               name="SR_Pro_1")
-        process_2_sr = multiprocessing.Process(target=assign_wip,
-                                               args=(sr_rawData_df_2, sr_sap_statusH_df_2, lock),
-                                               name="SR_Pro_2")
-        process_3_sr = multiprocessing.Process(target=assign_wip,
-                                               args=(sr_rawData_df_3, sr_sap_statusH_df_3, lock),
-                                               name="SR_Pro_3")
-        process_re = multiprocessing.Process(target=assign_wip, args=(re_rawData_df, re_sap_statusH_df,
-                                                                      lock, False), name="RE_Pro")
-        process_1_sr.start()
-        process_2_sr.start()
-        process_3_sr.start()
-        process_re.start()
+            # Given that the SR dataframe is very large, it is split into three,
+            # so that it feeds three cleaning processes
+            splitting_start = dt.now()
+            print("Splitting the SR dataframe in the background...")
+            sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_cats_1, sr_rawData_cats_2, \
+                sr_rawData_cats_3 = df_splitter(sr_rawData_df)
+            print(f"SR dataframe split complete. T: {dt.now() - splitting_start}")
+            splitting_start = dt.now()
+            print("Splitting the SR SAP dataframe in the background...")
+            sr_sap_statusH_df_1 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_1)]
+            sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
+            sr_sap_statusH_df_3 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_3)]
+            print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
 
-        process_1_sr.join()
-        process_2_sr.join()
-        process_3_sr.join()
-        process_re.join()
+            # Export raw data to csv
+            export_start = dt.now()
+            print("Exporting raw data to CSV\n")
+            sr_rawData_df_1.to_csv("CleanedRecords_csv/wip_rawData_p1", index=False)
+            sr_rawData_df_2.to_csv("CleanedRecords_csv/wip_rawData_p2", index=False)
+            sr_rawData_df_3.to_csv("CleanedRecords_csv/wip_rawData_p3", index=False)
+            re_rawData_df.to_csv("CleanedRecords_csv/wip_rawData_p4", index=False)
+            sr_sap_statusH_df_1.to_csv("CleanedRecords_csv/sap_historyData_p1", index=False)
+            sr_sap_statusH_df_2.to_csv("CleanedRecords_csv/sap_historyData_p2", index=False)
+            sr_sap_statusH_df_3.to_csv("CleanedRecords_csv/sap_historyData_p3", index=False)
+            re_sap_statusH_df.to_csv("CleanedRecords_csv/sap_historyData_p4", index=False)
+            print(f"Export complete. T: {dt.now() - export_start}")
 
-        # Update order type and factory status NULL values
-        update_orderType_factoryStatus(conn_sbi)
+        else:  # Perform transformation and loading
+            # Clean the data in multiple processes and make a WIP report
+            lock = multiprocessing.Lock()
+            process_1_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_1")
+            process_2_sr = multiprocessing.Process(target=assign_wip,  args=(lock,), name="SR_Pro_2")
+            process_3_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_3")
+            process_re = multiprocessing.Process(target=assign_wip, args=(lock, False), name="RE_Pro")
+
+            process_1_sr.start()
+            process_2_sr.start()
+            process_3_sr.start()
+            process_re.start()
+
+            process_1_sr.join()
+            process_2_sr.join()
+            process_3_sr.join()
+            process_re.join()
+
+            # Update order type and factory status NULL values
+            update_orderType_factoryStatus(conn_sbi)
     except Exception as e:
         print(repr(e))
         LOGGER.error(GENERIC_ERROR, exc_info=True)
@@ -120,4 +133,5 @@ if __name__ == '__main__':
         conn_sbi.close()
         show_goodbye()
         print(f"Total program duration: {dt.now() - program_start}")
-        show_message(AlertType.SUCCESS)
+        if wip_count == 0:
+            show_message(AlertType.SUCCESS)

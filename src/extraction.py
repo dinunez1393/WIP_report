@@ -7,13 +7,28 @@ import logging
 
 SQL_Q_ERROR = "An SQL SELECT statement error occurred"
 # To build table from scratch
-if dt.now().date() == date(2023, 10, 16):
+if dt.now().date() == date(2023, 10, 17):
     DATE_THRESHOLD = dt(2023, 9, 28, 0, 0)
 else:  # Normal runs
     DATE_THRESHOLD = dt.now() - timedelta(days=380)
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.ERROR)
+
+
+def select_wipTable_count(db_conn):
+    query = "SELECT COUNT(*) FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history];"
+
+    try:
+        with db_conn.cursor() as cursor:
+            cursor.execute(query)
+            table_count = int(cursor.fetchone()[0])
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(SQL_Q_ERROR, exc_info=True)
+        show_message(AlertType.FAILED)
+    else:
+        return table_count
 
 
 def select_wip_maxDate(db_conn, snapshotTime=False):

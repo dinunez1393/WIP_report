@@ -36,7 +36,7 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
     elif multiprocessing.current_process().name == "SR_Pro_3":
         pro_num = 3
     else:  # RE Process
-        pro_num = ""
+        pro_num = 4
 
     if to_csv:  # Save a CSV file of the cleaned data
         wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
