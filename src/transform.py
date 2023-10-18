@@ -381,7 +381,7 @@ def assign_wip(process_lock, isServerLevel=True):
 
 def assign_shipmentStatus(db_conn):
     """
-    Function gets all units that did not have a latest shipment status and updates the current dwell time. If a new
+    Function gets all units that did not have shipment status and updates the current dwell time. If a new
     shipment status exists since the latest INSERT run, then the NotShipped flag is updated accordingly
     :param db_conn: The connection to the database
     :return: a dataframe with the latest shipment information updated
