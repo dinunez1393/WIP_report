@@ -4,7 +4,7 @@ from utilities import fixed_date
 from datetime import timedelta
 
 
-DAYS_BACK = 120
+DAYS_BACK = 190
 
 
 class UnitHistory:

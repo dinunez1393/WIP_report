@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
             # Export raw data to csv
             export_start = dt.now()
-            print("Exporting raw data to CSV\n")
+            print("Exporting raw data to HDF5\n")
             sr_rawData_df_1.to_hdf("CleanedRecords_csv/wip_rawData_p1.h5", index=False, key='data', mode='w')
             sr_rawData_df_2.to_hdf("CleanedRecords_csv/wip_rawData_p2.h5", index=False, key='data', mode='w')
             sr_rawData_df_3.to_hdf("CleanedRecords_csv/wip_rawData_p3.h5", index=False, key='data', mode='w')
