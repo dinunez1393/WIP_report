@@ -1,7 +1,7 @@
 # DELETE SQL queries
 from alerts import *
 import logging
-from utilities import show_message, datetime_from_py_to_sql
+from utilities import show_message
 from datetime import datetime as dt, timedelta
 
 
@@ -44,7 +44,7 @@ def delete_allData(db_conn):
     :param db_conn: The connection to the database
     :return: None
     """
-    query = "DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]";
+    query = "TRUNCATE TABLE [SBILearning].[dbo].[DNun_tbl_Production_WIP_history];"
 
     try:
         delete_start = dt.now()

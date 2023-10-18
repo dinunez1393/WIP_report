@@ -201,8 +201,10 @@ def assign_wip(process_lock, isServerLevel=True):
         pro_num = 2
     elif multiprocessing.current_process().name == "SR_Pro_3":
         pro_num = 3
-    else:  # RE Process
+    elif multiprocessing.current_process().name == "SR_Pro_4":
         pro_num = 4
+    else:  # RE Process
+        pro_num = 5
 
     # Import raw data
     import_start = dt.now()
@@ -374,7 +376,7 @@ def assign_wip(process_lock, isServerLevel=True):
     logger.info(f"INSERTING ({pro_num}){'SR' if isServerLevel else 'RE'} WIP data - WARNING: "
                 f"This zone is locked ({dt.now()})")
     with process_lock:
-        load_wip_data(final_wip_df, to_csv=False, isServer=isServerLevel)
+        load_wip_data(final_wip_df, to_csv=True, isServer=isServerLevel)
 
 
 def assign_shipmentStatus(db_conn):

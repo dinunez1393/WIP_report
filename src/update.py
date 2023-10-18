@@ -101,11 +101,12 @@ def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
             print("\nNo new records to UPDATE\n")
 
 
-def update_orderType_factoryStatus(db_conn):
+def update_orderType_factoryStatus(db_conn, saved_as_csv=False):
     """
     Function to update the columns [OrderType], [FactoryStatus] based if they have the string value 'NULL',
     then set them to actual NULL
     :param db_conn: the connection to the database
+    :param saved_as_csv: Flag to indicate if the load operation was previously saved as CSV or directly to SQL
     :return: None
     """
     update_query = """
@@ -123,15 +124,18 @@ def update_orderType_factoryStatus(db_conn):
                         ELSE [FactoryStatus]
                     END;    
     """
-    try:
-        update_start = dt.now()
-        with db_conn.cursor() as cursor:
-            print("Updating Order Type and Factory status NULL values in the background...")
-            cursor.execute(update_query)
-    except Exception as e:
-        print(repr(e))
-        LOGGER.error(SQL_U_ERROR, exc_info=True)
-        show_message(AlertType.FAILED)
+    if saved_as_csv:
+        pass
     else:
-        db_conn.commit()
-        print(f"\nUPDATE operation ran successfully\nT: {dt.now() - update_start}\n")
+        try:
+            update_start = dt.now()
+            with db_conn.cursor() as cursor:
+                print("Updating Order Type and Factory status NULL values in the background...")
+                cursor.execute(update_query)
+        except Exception as e:
+            print(repr(e))
+            LOGGER.error(SQL_U_ERROR, exc_info=True)
+            show_message(AlertType.FAILED)
+        else:
+            db_conn.commit()
+            print(f"\nUPDATE operation ran successfully\nT: {dt.now() - update_start}\n")

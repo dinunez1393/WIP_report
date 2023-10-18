@@ -1,5 +1,5 @@
 # Utilities functions
-from datetime import datetime as dt, date, time, timedelta
+from datetime import datetime as dt, time, timedelta
 import tkinter as tk
 from tkinter import messagebox
 from alerts import *
@@ -163,8 +163,8 @@ def items_to_SQL_values(collection, isForUpdate=True, chunk_size=1_000):
 
 def df_splitter(dataframe, category_name='SerialNumber'):
     """
-    Function splits a dataframe by category into three (25%-40%-35%)
-    :param dataframe: The dataframe to be split into three
+    Function splits a dataframe by category into four (15%-20%-35%-30%)
+    :param dataframe: The dataframe to be split into four
     :type dataframe: pandas.Dataframe
     :param category_name: The column name of the category to use for the splitting
     :return: a tuple containing three dataframes, and three lists. The list contains the unique categories
@@ -172,12 +172,15 @@ def df_splitter(dataframe, category_name='SerialNumber'):
     :rtype: tuple
     """
     unique_categories = list(set(dataframe[category_name]))
-    partition_sizes = (int(len(unique_categories) * 0.25), int(len(unique_categories) * 0.65))
+    partition_sizes = (int(len(unique_categories) * 0.15), int(len(unique_categories) * 0.35),
+                       int(len(unique_categories) * 0.7))
     division_1 = unique_categories[:partition_sizes[0]]
     division_2 = unique_categories[partition_sizes[0]: partition_sizes[1]]
-    division_3 = unique_categories[partition_sizes[1]:]
+    division_3 = unique_categories[partition_sizes[1]: partition_sizes[2]]
+    division_4 = unique_categories[partition_sizes[2]:]
     new_df_1 = dataframe[dataframe[category_name].isin(division_1)]
     new_df_2 = dataframe[dataframe[category_name].isin(division_2)]
     new_df_3 = dataframe[dataframe[category_name].isin(division_3)]
+    new_df_4 = dataframe[dataframe[category_name].isin(division_4)]
 
-    return new_df_1, new_df_2, new_df_3, division_1, division_2, division_3
+    return new_df_1, new_df_2, new_df_3, new_df_4, division_1, division_2, division_3, division_4

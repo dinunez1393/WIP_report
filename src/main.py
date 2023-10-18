@@ -76,31 +76,33 @@ if __name__ == '__main__':
             # Get all the raw data
             re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
 
-            # Given that the SR dataframe is very large, it is split into three,
-            # so that it feeds three cleaning processes
+            # Given that the SR dataframe is very large, it is split into four, so that it feeds four cleaning processes
             splitting_start = dt.now()
             print("Splitting the SR dataframe in the background...")
-            sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_cats_1, sr_rawData_cats_2, \
-                sr_rawData_cats_3 = df_splitter(sr_rawData_df)
+            sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_df_4, sr_rawData_cats_1, sr_rawData_cats_2, \
+                sr_rawData_cats_3, sr_rawData_cats_4 = df_splitter(sr_rawData_df)
             print(f"SR dataframe split complete. T: {dt.now() - splitting_start}")
             splitting_start = dt.now()
             print("Splitting the SR SAP dataframe in the background...")
             sr_sap_statusH_df_1 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_1)]
             sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
             sr_sap_statusH_df_3 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_3)]
+            sr_sap_statusH_df_4 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_4)]
             print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
 
-            # Export raw data to csv
+            # Export raw data to HDF5
             export_start = dt.now()
             print("Exporting raw data to HDF5\n")
             sr_rawData_df_1.to_hdf("CleanedRecords_csv/wip_rawData_p1.h5", index=False, key='data', mode='w')
             sr_rawData_df_2.to_hdf("CleanedRecords_csv/wip_rawData_p2.h5", index=False, key='data', mode='w')
             sr_rawData_df_3.to_hdf("CleanedRecords_csv/wip_rawData_p3.h5", index=False, key='data', mode='w')
-            re_rawData_df.to_hdf("CleanedRecords_csv/wip_rawData_p4.h5", index=False, key='data', mode='w')
+            sr_rawData_df_4.to_hdf("CleanedRecords_csv/wip_rawData_p4.h5", index=False, key='data', mode='w')
+            re_rawData_df.to_hdf("CleanedRecords_csv/wip_rawData_p5.h5", index=False, key='data', mode='w')
             sr_sap_statusH_df_1.to_hdf("CleanedRecords_csv/sap_historyData_p1.h5", index=False, key='data', mode='w')
             sr_sap_statusH_df_2.to_hdf("CleanedRecords_csv/sap_historyData_p2.h5", index=False, key='data', mode='w')
             sr_sap_statusH_df_3.to_hdf("CleanedRecords_csv/sap_historyData_p3.h5", index=False, key='data', mode='w')
-            re_sap_statusH_df.to_hdf("CleanedRecords_csv/sap_historyData_p4.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_4.to_hdf("CleanedRecords_csv/sap_historyData_p4.h5", index=False, key='data', mode='w')
+            re_sap_statusH_df.to_hdf("CleanedRecords_csv/sap_historyData_p5.h5", index=False, key='data', mode='w')
             print(f"Export complete. T: {dt.now() - export_start}")
 
         else:  # Perform transformation and loading
@@ -109,20 +111,23 @@ if __name__ == '__main__':
             process_1_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_1")
             process_2_sr = multiprocessing.Process(target=assign_wip,  args=(lock,), name="SR_Pro_2")
             process_3_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_3")
+            process_4_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_4")
             process_re = multiprocessing.Process(target=assign_wip, args=(lock, False), name="RE_Pro")
 
             process_1_sr.start()
             process_2_sr.start()
             process_3_sr.start()
+            process_4_sr.start()
             process_re.start()
 
             process_1_sr.join()
             process_2_sr.join()
             process_3_sr.join()
+            process_4_sr.join()
             process_re.join()
 
             # Update order type and factory status NULL values
-            update_orderType_factoryStatus(conn_sbi)
+            update_orderType_factoryStatus(conn_sbi, saved_as_csv=True)
     except Exception as e:
         print(repr(e))
         LOGGER.error(GENERIC_ERROR, exc_info=True)

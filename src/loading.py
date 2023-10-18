@@ -35,14 +35,16 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
         pro_num = 2
     elif multiprocessing.current_process().name == "SR_Pro_3":
         pro_num = 3
-    else:  # RE Process
+    elif multiprocessing.current_process().name == "SR_Pro_4":
         pro_num = 4
+    else:  # RE Process
+        pro_num = 5
 
     if to_csv:  # Save a CSV file of the cleaned data
         wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
             ['DwellTime_calendar', 'DwellTime_working']].applymap(lambda x: format(x, '.7f'))
         print(f"Creating ({pro_num}) {'SR' if isServer else 'RE'} WIP .csv file in the background...")
-        wip_df.to_csv(f"../CleanedRecords_csv/wip_{'sr' if isServer else 're'}_records_{pro_num}.csv", index=False)
+        wip_df.to_csv(f"CleanedRecords_csv/wip_{'sr' if isServer else 're'}_records_{pro_num}.csv", index=False)
         print(f"CSV file for ({pro_num}) {'SR' if isServer else 'RE'} WIP created successfully\n")
     else:
         print(f"({pro_num}) INSERT Process:\n")
@@ -199,7 +201,6 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
                 db_conn.commit()
                 print(f"\n({pro_num}) {'SR' if isServer else 'RE'} INSERT Operation ran successfully.\n"
                       f"T: {dt.now() - insert_start}\n")
-            finally:
                 # Close the DB connection
                 db_conn.close()
         # If no new records in server_dw_list
