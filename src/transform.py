@@ -186,8 +186,8 @@ def assign_wip(process_lock, isServerLevel=True):
     """
     Function that cleans the processed raw data to make a full WIP report and uses another function to
      export the cleaned data to SQL or CSV
-    :param process_lock: A lock for the thread that will be used to upload the data to SQL
-    :type process_lock: threading.Lock
+    :param process_lock: A lock for the process that will be used to upload the data to SQL
+    :type process_lock: multiprocessing.Lock
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
     """
     # Logger variables
@@ -373,10 +373,7 @@ def assign_wip(process_lock, isServerLevel=True):
           f"{dt.now() - allocation_start}\n")
 
     # Load results
-    logger.info(f"INSERTING ({pro_num}){'SR' if isServerLevel else 'RE'} WIP data - WARNING: "
-                f"This zone is locked ({dt.now()})")
-    with process_lock:
-        load_wip_data(final_wip_df, to_csv=True, isServer=isServerLevel)
+    load_wip_data(final_wip_df, process_lock, to_csv=False, isServer=isServerLevel)
 
 
 def assign_shipmentStatus(db_conn):

@@ -7,7 +7,7 @@ import logging
 
 SQL_Q_ERROR = "An SQL SELECT statement error occurred"
 # To build table from scratch
-if dt.now().date() == date(2023, 10, 17):
+if dt.now().date() == date(2023, 10, 18):
     DATE_THRESHOLD = dt(2023, 9, 30, 0, 0)
 else:  # Normal runs
     DATE_THRESHOLD = dt.now() - timedelta(days=400)

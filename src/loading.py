@@ -12,6 +12,7 @@ from db_conn import make_connection
 SUCCESS_OP = "The INSERT operation completed successfully"
 SQL_I_ERROR = "There was an error in the INSERT query"
 CHUNK_SIZE = 1_000
+BULK_SIZE = 500
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.ERROR)
 
@@ -19,11 +20,15 @@ SERVER_NAME_sbi = 'WQMSDEV01'
 DATABASE_NAME_sbi = 'SBILearning'
 
 
-def load_wip_data(wip_df, to_csv=False, isServer=True):
+def load_wip_data(wip_df, lock, to_csv=False, isServer=True):
     """
     Function to load new cleaned data to SQL table either indirectly, via CSV, or directly, via INSERT query
+    For SQL INSERT: The data is first inserted to temporary tables carrying in their names the process number, hence
+    allowing parallel insertion. Then, all the data from the temp table is bulk inserted into the main SQL WIP table.
     :param wip_df: A dataframe containing the cleaned WIP records
     :type wip_df: pandas.Dataframe
+    :param lock: A lock for the process that will be used to upload the data to SQL
+    :type lock: multiprocessing.Lock
     :param to_csv: A flag to indicate whether to load the data to a CSV file or not
     :param isServer: A flag to indicate whether the data in cleaned_wip_df is server data or not
     :return: None
@@ -47,7 +52,7 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
         wip_df.to_csv(f"CleanedRecords_csv/wip_{'sr' if isServer else 're'}_records_{pro_num}.csv", index=False)
         print(f"CSV file for ({pro_num}) {'SR' if isServer else 'RE'} WIP created successfully\n")
     else:
-        print(f"({pro_num}) INSERT Process:\n")
+        print(f"({pro_num}) {'SR' if isServer else 'RE'} INSERT Process:\n")
 
         wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
             ['DwellTime_calendar', 'DwellTime_working']].applymap(lambda x: format(x, '.7f'))
@@ -91,31 +96,44 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
                     wip_values.extend(item)
                 big_load = False
 
-            insert_query = """
-                    INSERT INTO [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] (
-                        [Site]
-                      ,[Building]
-                      ,[SerialNumber]
-                      ,[StockCode]
-                      ,[SKU]
-                      ,[CheckpointID]
-                      ,[CheckpointName]
-                      ,[ProcessArea]
-                      ,[TransactionID]
-                      ,[TransactionDate]
-                      ,[WIP_SnapshotDate]
-                      ,[DwellTime_calendar]
-                      ,[DwellTime_working]
-                      ,[OrderType]
-                      ,[FactoryStatus]
-                      ,[ProductType]
-                      ,[PackedIsLast_flag]
-                      ,[PackedPreviously_flag]
-                      ,[ExtractionDate]
-                    )
-                    VALUES
-                    {};
+            create_query_temp = f"""
+                    CREATE TABLE #temp_tbl_Production_WIP_history_{pro_num}(
+                    [Site] [char](2) NOT NULL,
+                    [Building] [varchar](7) NOT NULL,
+                    [SerialNumber] [char](12) NOT NULL,
+                    [StockCode] [varchar](16) NOT NULL,
+                    [SKU] [varchar](100) NOT NULL,
+                    [CheckpointID] [int] NOT NULL,
+                    [CheckpointName] [varchar](50) NOT NULL,
+                    [ProcessArea] [varchar](20) NOT NULL,
+                    [TransactionID] [bigint] NOT NULL,
+                    [TransactionDate] [datetime] NOT NULL,
+                    [WIP_SnapshotDate] [datetime] NOT NULL,
+                    [DwellTime_calendar] [decimal](9, 4) NOT NULL,
+                    [DwellTime_working] [decimal](9, 4) NOT NULL,
+                    [OrderType] [varchar](20) NULL,
+                    [FactoryStatus] [varchar](20) NULL,
+                    [ProductType] [varchar](8) NOT NULL,
+                    [PackedIsLast_flag] [bit] NOT NULL,
+                    [PackedPreviously_flag] [bit] NOT NULL,
+                    [ExtractionDate] [datetime] NOT NULL);
             """
+            insert_query_temp = """
+                    INSERT INTO #temp_tbl_Production_WIP_history_{0}
+                    VALUES
+                    {1};
+            """
+            truncate_query_temp = f"TRUNCATE TABLE #temp_tbl_Production_WIP_history_{pro_num};"
+            drop_query_temp = f"DROP TABLE #temp_tbl_Production_WIP_history_{pro_num};"
+            insert_query_main = f"""
+                    INSERT INTO [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
+                    SELECT * FROM #temp_tbl_Production_WIP_history_{pro_num};
+            """
+            insertQuery_main_small = """
+                                INSERT INTO [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
+                                VALUES
+                                {};
+                        """
             # INSERT new records into DB
             try:
                 insert_start = dt.now()
@@ -125,11 +143,31 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
                     if big_load:
                         upload_size = len(wip_values_chunked)
 
+                        # Create temp table
+                        cursor.execute(create_query_temp)
+                        counter = 0
+                        bulk_counter = 1
+
                         if pro_num == 2:  # SQL upload for SR data - Process 2
                             for wip_item in tqdm(wip_values_chunked, total=upload_size,
                                                  desc=f"INSERTING new ({pro_num}) {'SR' if isServer else 'RE'} "
                                                       f"WIP records in chunks"):
-                                cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
+                                cursor.execute(insert_query_temp.format(pro_num,
+                                                                        items_to_SQL_values(wip_item,
+                                                                                            isForUpdate=False)))
+                                counter += 1
+                                # Bulk INSERT
+                                if (counter % BULK_SIZE) == 0 or counter == upload_size:
+                                    with lock:
+                                        print(f"({pro_num}) {'SR' if isServer else 'RE'} "
+                                              f"BULK INSERT {bulk_counter}/{upload_size // BULK_SIZE} "
+                                              f"- WARNING: This zone is locked")
+                                        cursor.execute(insert_query_main)
+                                    cursor.execute(truncate_query_temp)
+                                    bulk_counter += 1
+                                    if counter == upload_size:  # End of big load insertion
+                                        cursor.execute(drop_query_temp)
+
                         else:  # SQL upload for RE data and SR data - Processes 1 & 3
                             insert_start = dt.now()
                             # Flags for process progress
@@ -140,7 +178,21 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
                             print(f"\n({pro_num}) {'SR' if isServer else 'RE'} WIP INSERT operation is "
                                   f"running on the background. Progress will show intermittently\n")
                             for index, wip_item in enumerate(wip_values_chunked):
-                                cursor.execute(insert_query.format(items_to_SQL_values(wip_item, isForUpdate=False)))
+                                cursor.execute(insert_query_temp.format(pro_num,
+                                                                        items_to_SQL_values(wip_item,
+                                                                                            isForUpdate=False)))
+                                counter += 1
+                                # Bulk INSERT
+                                if (counter % BULK_SIZE) == 0 or counter == upload_size:
+                                    with lock:
+                                        print(f"({pro_num}) {'SR' if isServer else 'RE'} "
+                                              f"BULK INSERT {bulk_counter}/{upload_size // BULK_SIZE} "
+                                              f"- WARNING: This zone is locked")
+                                        cursor.execute(insert_query_main)
+                                    cursor.execute(truncate_query_temp)
+                                    bulk_counter += 1
+                                    if counter == upload_size:  # End of big load insertion
+                                        cursor.execute(drop_query_temp)
 
                                 # Progress feedback
                                 current_progress = (index + 1) / upload_size
@@ -185,14 +237,18 @@ def load_wip_data(wip_df, to_csv=False, isServer=True):
                         # Insert remaining values
                         if len(wip_remaining) > 0:
                             print(f"Inserting an additional small size ({len(wip_remaining)} rows) "
-                                  f"of ({pro_num}) {'SR' if isServer else 'RE'} WIP records in the background...")
-                            cursor.execute(insert_query.format(items_to_SQL_values(
-                                wip_values_remaining, isForUpdate=False, chunk_size=len(wip_remaining))))
+                                  f"of ({pro_num}) {'SR' if isServer else 'RE'} WIP records in the background...\n"
+                                  f"WARNING: This zone is locked")
+                            with lock:
+                                cursor.execute(insertQuery_main_small.format(items_to_SQL_values(
+                                    wip_values_remaining, isForUpdate=False, chunk_size=len(wip_remaining))))
                     else:  # Insert small chunk (less than 1,000 rows)
                         print(f"Inserting a small size ({len(cleaned_wip_list)} rows) of "
-                              f"({pro_num}) {'SR' if isServer else 'RE'} WIP records in the background...")
-                        cursor.execute(insert_query.format(items_to_SQL_values(
-                            wip_values, isForUpdate=False, chunk_size=len(cleaned_wip_list))))
+                              f"({pro_num}) {'SR' if isServer else 'RE'} WIP records in the background...\n"
+                              f"WARNING: This zone is locked")
+                        with lock:
+                            cursor.execute(insertQuery_main_small.format(items_to_SQL_values(
+                                wip_values, isForUpdate=False, chunk_size=len(cleaned_wip_list))))
             except Exception as e:
                 print(repr(e))
                 LOGGER.error(SQL_I_ERROR, exc_info=True)

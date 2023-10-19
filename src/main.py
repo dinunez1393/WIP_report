@@ -127,7 +127,7 @@ if __name__ == '__main__':
             process_re.join()
 
             # Update order type and factory status NULL values
-            update_orderType_factoryStatus(conn_sbi, saved_as_csv=True)
+            update_orderType_factoryStatus(conn_sbi, saved_as_csv=False)
     except Exception as e:
         print(repr(e))
         LOGGER.error(GENERIC_ERROR, exc_info=True)
