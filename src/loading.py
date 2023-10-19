@@ -8,7 +8,6 @@ import pandas as pd
 from utilities import show_message, items_to_SQL_values
 from db_conn import make_connection
 
-
 SUCCESS_OP = "The INSERT operation completed successfully"
 SQL_I_ERROR = "There was an error in the INSERT query"
 CHUNK_SIZE = 1_000
@@ -146,7 +145,7 @@ def load_wip_data(wip_df, lock, to_csv=False, isServer=True):
                         bulk_counter = 1
 
                         # SQL UPLOAD
-                        # Flags for process progress
+                        # Flags for upload process progress
                         nickel = dime = dime_2 = quarter = dime_3 = dime_4 = half = dime_6 = quarter_3 = \
                             dime_8 = ninety = ninety_5 = True
                         progress_prompt = f"\n({pro_num}) {'SR' if isServer else 'RE'} WIP INSERT operation at "
@@ -155,63 +154,87 @@ def load_wip_data(wip_df, lock, to_csv=False, isServer=True):
                               f"running on the background. Progress will show intermittently\n")
                         # Create temp table
                         cursor.execute(create_query_temp)
-                        for index, wip_item in enumerate(wip_values_chunked):
-                            cursor.execute(insert_query_temp.format(pro_num,
-                                                                    items_to_SQL_values(wip_item,
-                                                                                        isForUpdate=False)))
-                            # Bulk INSERT
-                            if ((index + 1) % BULK_SIZE) == 0 or (index + 1) == upload_size:
-                                print(f"\n({pro_num}) {'SR' if isServer else 'RE'} "
-                                      f"BULK INSERT {bulk_counter}/{upload_size // BULK_SIZE} "
-                                      f"- WARNING: This zone is locked")
-                                with lock:
-                                    cursor.execute(insert_query_main)
-                                    cursor.execute(truncate_query_temp)
-                                    print(f"\nLock released for Process #{pro_num}, bulk INSERT #{bulk_counter}")
-                                bulk_counter += 1
-                                if (index + 1) == upload_size:  # End of big load insertion
-                                    cursor.execute(drop_query_temp)
-                                    print(f"\n({pro_num}) DROPPED temp {'SR' if isServer else 'RE'} WIP table")
 
-                            # Progress feedback
-                            current_progress = (index + 1) / upload_size
-                            if ninety_5 and current_progress >= 0.95:
-                                print(f"{progress_prompt}95% ({upload_size} items) T: {dt.now() - insert_start}")
-                                ninety_5 = False
-                            elif ninety and current_progress >= 0.9:
-                                print(f"{progress_prompt}90% ({upload_size} items) T: {dt.now() - insert_start}")
-                                ninety = False
-                            elif dime_8 and current_progress >= 0.8:
-                                print(f"{progress_prompt}80% ({upload_size} items) T: {dt.now() - insert_start}")
-                                dime_8 = False
-                            elif quarter_3 and current_progress >= 0.75:
-                                print(f"{progress_prompt}75% ({upload_size} items) T: {dt.now() - insert_start}")
-                                quarter_3 = False
-                            elif dime_6 and current_progress >= 0.6:
-                                print(f"{progress_prompt}60% ({upload_size} items) T: {dt.now() - insert_start}")
-                                dime_6 = False
-                            elif half and current_progress >= 0.5:
-                                print(f"{progress_prompt}50% ({upload_size} items) T: {dt.now() - insert_start}")
-                                half = False
-                            elif dime_4 and current_progress >= 0.4:
-                                print(f"{progress_prompt}40% ({upload_size} items) T: {dt.now() - insert_start}")
-                                dime_4 = False
-                            elif dime_3 and current_progress >= 0.3:
-                                print(f"{progress_prompt}30% ({upload_size} items) T: {dt.now() - insert_start}")
-                                dime_3 = False
-                            elif quarter and current_progress >= 0.25:
-                                print(f"{progress_prompt}25% ({upload_size} items) T: {dt.now() - insert_start}")
-                                quarter = False
-                            elif dime_2 and current_progress >= 0.2:
-                                print(f"{progress_prompt}20% ({upload_size} items) T: {dt.now() - insert_start}")
-                                dime_2 = False
-                            elif dime and current_progress >= 0.1:
-                                print(f"{progress_prompt}10% ({upload_size} items) T: {dt.now() - insert_start}")
-                                dime = False
-                            elif nickel and current_progress >= 0.05:
-                                print(f"{progress_prompt}5% ({upload_size} items) T: {dt.now() - insert_start}")
-                                nickel = False
-                        print(f"{progress_prompt}100%. Duration: {dt.now() - insert_start}\n")
+                        if pro_num == 2:  # SQL upload for SR data - Process 2
+                            for index, wip_item in enumerate(tqdm(wip_values_chunked, total=upload_size,
+                                                                  desc=f"INSERTING new ({pro_num}) "
+                                                                       f"{'SR' if isServer else 'RE'} "
+                                                                       f"WIP records in chunks")):
+                                cursor.execute(insert_query_temp.format(pro_num,
+                                                                        items_to_SQL_values(wip_item,
+                                                                                            isForUpdate=False)))
+                                # Bulk INSERT
+                                if ((index + 1) % BULK_SIZE) == 0 or (index + 1) == upload_size:
+                                    print(f"\n({pro_num}) {'SR' if isServer else 'RE'} "
+                                          f"BULK INSERT {bulk_counter}/{(upload_size // BULK_SIZE) + 1} "
+                                          f"- WARNING: This zone is locked")
+                                    with lock:
+                                        cursor.execute(insert_query_main)
+                                        cursor.execute(truncate_query_temp)
+                                        print(f"\nLock released for Process #{pro_num}, bulk INSERT #{bulk_counter}")
+                                    bulk_counter += 1
+                                    if (index + 1) == upload_size:  # End of big load insertion
+                                        cursor.execute(drop_query_temp)
+                                        print(f"\n({pro_num}) DROPPED temp {'SR' if isServer else 'RE'} WIP table")
+
+                        else:  # SQL upload for RE data and SR data - Processes 1, 3, 4
+                            for index, wip_item in enumerate(wip_values_chunked):
+                                cursor.execute(insert_query_temp.format(pro_num,
+                                                                        items_to_SQL_values(wip_item,
+                                                                                            isForUpdate=False)))
+                                # Bulk INSERT
+                                if ((index + 1) % BULK_SIZE) == 0 or (index + 1) == upload_size:
+                                    print(f"\n({pro_num}) {'SR' if isServer else 'RE'} "
+                                          f"BULK INSERT {bulk_counter}/{(upload_size // BULK_SIZE) + 1} "
+                                          f"- WARNING: This zone is locked")
+                                    with lock:
+                                        cursor.execute(insert_query_main)
+                                        cursor.execute(truncate_query_temp)
+                                        print(f"\nLock released for Process #{pro_num}, bulk INSERT #{bulk_counter}")
+                                    bulk_counter += 1
+                                    if (index + 1) == upload_size:  # End of big load insertion
+                                        cursor.execute(drop_query_temp)
+                                        print(f"\n({pro_num}) DROPPED temp {'SR' if isServer else 'RE'} WIP table")
+
+                                # Progress feedback
+                                current_progress = (index + 1) / upload_size
+                                if ninety_5 and current_progress >= 0.95:
+                                    print(f"{progress_prompt}95% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    ninety_5 = False
+                                elif ninety and current_progress >= 0.9:
+                                    print(f"{progress_prompt}90% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    ninety = False
+                                elif dime_8 and current_progress >= 0.8:
+                                    print(f"{progress_prompt}80% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    dime_8 = False
+                                elif quarter_3 and current_progress >= 0.75:
+                                    print(f"{progress_prompt}75% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    quarter_3 = False
+                                elif dime_6 and current_progress >= 0.6:
+                                    print(f"{progress_prompt}60% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    dime_6 = False
+                                elif half and current_progress >= 0.5:
+                                    print(f"{progress_prompt}50% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    half = False
+                                elif dime_4 and current_progress >= 0.4:
+                                    print(f"{progress_prompt}40% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    dime_4 = False
+                                elif dime_3 and current_progress >= 0.3:
+                                    print(f"{progress_prompt}30% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    dime_3 = False
+                                elif quarter and current_progress >= 0.25:
+                                    print(f"{progress_prompt}25% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    quarter = False
+                                elif dime_2 and current_progress >= 0.2:
+                                    print(f"{progress_prompt}20% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    dime_2 = False
+                                elif dime and current_progress >= 0.1:
+                                    print(f"{progress_prompt}10% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    dime = False
+                                elif nickel and current_progress >= 0.05:
+                                    print(f"{progress_prompt}5% ({upload_size} items) T: {dt.now() - insert_start}")
+                                    nickel = False
+                            print(f"{progress_prompt}100%. Duration: {dt.now() - insert_start}\n")
 
                         # Insert remaining values
                         if len(wip_remaining) > 0:

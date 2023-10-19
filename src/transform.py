@@ -375,9 +375,9 @@ def assign_wip(semaphore, process_lock, isServerLevel=True):
           f"{dt.now() - allocation_start}\n")
 
     # Load results
-    logger.info(f"INSERTING ({pro_num}){'SR' if isServerLevel else 'RE'} WIP data - SEMAPHORE WARNING: "
-                f"This zone is limited to MAX 2 concurrent processes ({dt.now()})")
     with semaphore:
+        logger.info(f"INSERTING ({pro_num}){'SR' if isServerLevel else 'RE'} WIP data - SEMAPHORE WARNING: "
+                    f"This zone is limited to MAX 2 concurrent processes ({dt.now()})")
         load_wip_data(final_wip_df, process_lock, to_csv=False, isServer=isServerLevel)
 
 
