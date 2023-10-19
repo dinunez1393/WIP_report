@@ -1,0 +1,441 @@
+Running raw data extraction
+WIP ANALYSIS
+(2023-10-19 10:03:48.954866)
+
+_______________________________________________________________________________________
+Deleting all data...
+WIP table has been cleared
+T: 0:00:00.020691
+
+
+SELECT queries running concurrently in the background...
+
+SELECT process for MAX date from WIP is running in the background...
+SELECT process for MAX date from WIP ran successfully. The latest MAX date is: 2023-09-30 00:00:00
+T: 0:00:00.017842
+
+SELECT process for Server raw data from [ASBuiltDW].[dbo].[producthistory] running in the background...
+
+SELECT process for Rack Build raw data from [ASBuiltDW].[dbo].[producthistory] running in the background...
+
+SELECT process for Rack End-of-Line raw data from [ASBuiltDW].[dbo].[producthistory] running in the background...
+
+SELECT process for SAP Historical Status data is running on the background...
+
+SELECT process for raw rack End-of-Line data ran successfully
+T: 0:00:00.616939
+
+SELECT process for raw rack build data ran successfully
+T: 0:00:00.835445
+
+SAP Historical Status query execution is done. T: 0:00:04.081671
+SAP Historical Status dataframe is built. T: 0:00:00.106980
+SAP Historical Status dataframe data assurance is done. T: 0:00:00.081697
+SAP Historical Status dataframe is split into two dataframes SR and RE. T: 0:00:00.225641
+SELECT process for SAP Historical Status data ran successfully
+
+SELECT process for main raw data ran successfully
+T: 0:00:11.913264
+
+
+TOTAL extraction time: 0:00:11.980395
+Data allocation is running in the background...
+
+TOTAL raw data allocation time: 0:00:01.164161
+ASYNC DB Connections ran successfully
+
+Splitting the SR dataframe in the background...
+SR dataframe split complete. T: 0:00:00.141052
+Splitting the SR SAP dataframe in the background...
+SR SAP dataframe split complete. T: 0:00:00.078794
+
+Exporting raw data to HDF5
+
+Export complete. T: 0:00:05.062000
+DB Connection ran successfully
+
+
+The DB CONNECTION closed successfully
+Goodbye!
+Total program duration: 0:00:24.947260
+Raw data extraction completed.
+Running data transformation and loading
+WIP ANALYSIS
+(2023-10-19 10:04:15.522911)
+
+_______________________________________________________________________________________
+(2) Importing raw data
+
+(3) Importing raw data
+
+(4) Importing raw data
+
+(1) Importing raw data
+
+(5) Importing raw data
+
+(2) Raw data import is complete. T: 0:00:06.415066
+(2) SR WIP cleaning operation progress:   0%|▏                                                                                                                                                             | 6/6340 [00:00<01:51, 56.73it/s](1) Raw data import is complete. T: 0:00:06.490301
+(1) SR WIP cleaning operation is running on the background. Progress will show intermittently
+(2) SR WIP cleaning operation progress:   0%|▋                                                                                                                                                           | 30/6340 [00:00<01:03, 100.13it/s](3) Raw data import is complete. T: 0:00:06.773617
+(3) SR WIP cleaning operation is running on the background. Progress will show intermittently
+(2) SR WIP cleaning operation progress:   1%|█▎                                                                                                                                                           | 51/6340 [00:00<01:08, 91.71it/s](4) Raw data import is complete. T: 0:00:07.017351
+(4) SR WIP cleaning operation is running on the background. Progress will show intermittently
+(2) SR WIP cleaning operation progress:   1%|█▌                                                                                                                                                           | 61/6340 [00:00<01:17, 81.19it/s](5) Raw data import is complete. T: 0:00:06.997281
+(5) RE WIP cleaning operation is running on the background. Progress will show intermittently
+(2) SR WIP cleaning operation progress:   2%|██▊                                                                                                                                                         | 112/6340 [00:01<01:29, 69.26it/s]
+(1) SR WIP cleaning operation at 5% (2717 items to clean) T: 0:00:01.425024
+(2) SR WIP cleaning operation progress:   2%|███▏                                                                                                                                                        | 132/6340 [00:01<01:16, 80.94it/s]
+(5) RE WIP cleaning operation at 5% (2124 items to clean) T: 0:00:01.031877
+(2) SR WIP cleaning operation progress:   3%|████                                                                                                                                                        | 164/6340 [00:02<01:33, 66.03it/s]
+(3) SR WIP cleaning operation at 5% (3623 items to clean) T: 0:00:01.865510
+(2) SR WIP cleaning operation progress:   3%|████▎                                                                                                                                                       | 176/6340 [00:02<01:20, 76.74it/s]
+(5) RE WIP cleaning operation at 10% (2124 items to clean) T: 0:00:01.562686
+(2) SR WIP cleaning operation progress:   3%|████▊                                                                                                                                                       | 195/6340 [00:02<01:11, 85.78it/s]
+(1) SR WIP cleaning operation at 10% (2717 items to clean) T: 0:00:02.402347
+(2) SR WIP cleaning operation progress:   5%|███████▍                                                                                                                                                   | 302/6340 [00:03<00:55, 107.84it/s]
+(3) SR WIP cleaning operation at 10% (3623 items to clean) T: 0:00:03.181271
+
+(4) SR WIP cleaning operation at 5% (5435 items to clean) T: 0:00:02.948619
+(2) SR WIP cleaning operation progress:   5%|████████▎                                                                                                                                                  | 341/6340 [00:03<00:55, 109.01it/s]
+(5) RE WIP cleaning operation at 20% (2124 items to clean) T: 0:00:03.161303
+(2) SR WIP cleaning operation progress:   6%|█████████▊                                                                                                                                                 | 403/6340 [00:04<00:48, 122.49it/s]
+(1) SR WIP cleaning operation at 20% (2717 items to clean) T: 0:00:04.274610
+(2) SR WIP cleaning operation progress:   8%|████████████                                                                                                                                               | 494/6340 [00:04<00:33, 175.46it/s]
+(5) RE WIP cleaning operation at 25% (2124 items to clean) T: 0:00:04.274107
+(2) SR WIP cleaning operation progress:  10%|███████████████▎                                                                                                                                           | 628/6340 [00:05<00:34, 167.13it/s]
+(4) SR WIP cleaning operation at 10% (5435 items to clean) T: 0:00:05.085291
+(2) SR WIP cleaning operation progress:  10%|███████████████▉                                                                                                                                           | 651/6340 [00:05<00:30, 184.03it/s]
+(1) SR WIP cleaning operation at 25% (2717 items to clean) T: 0:00:05.759894
+(2) SR WIP cleaning operation progress:  11%|████████████████▍                                                                                                                                          | 670/6340 [00:05<00:31, 181.84it/s]
+(3) SR WIP cleaning operation at 20% (3623 items to clean) T: 0:00:05.621128
+(2) SR WIP cleaning operation progress:  12%|██████████████████                                                                                                                                         | 741/6340 [00:06<00:38, 144.01it/s]
+(5) RE WIP cleaning operation at 30% (2124 items to clean) T: 0:00:05.811151
+(2) SR WIP cleaning operation progress:  14%|████████████████████▉                                                                                                                                      | 857/6340 [00:07<00:35, 155.23it/s]
+(1) SR WIP cleaning operation at 30% (2717 items to clean) T: 0:00:07.100263
+(2) SR WIP cleaning operation progress:  15%|██████████████████████▌                                                                                                                                    | 922/6340 [00:07<00:47, 115.10it/s]
+(3) SR WIP cleaning operation at 25% (3623 items to clean) T: 0:00:07.409754
+(2) SR WIP cleaning operation progress:  16%|████████████████████████▉                                                                                                                                 | 1026/6340 [00:08<00:51, 102.57it/s]
+(5) RE WIP cleaning operation at 40% (2124 items to clean) T: 0:00:08.005074
+(2) SR WIP cleaning operation progress:  18%|███████████████████████████                                                                                                                               | 1115/6340 [00:09<00:49, 104.62it/s]
+(4) SR WIP cleaning operation at 20% (5435 items to clean) T: 0:00:09.165275
+
+(3) SR WIP cleaning operation at 30% (3623 items to clean) T: 0:00:09.421231
+(2) SR WIP cleaning operation progress:  18%|████████████████████████████                                                                                                                               | 1147/6340 [00:10<00:52, 98.64it/s]
+(1) SR WIP cleaning operation at 40% (2717 items to clean) T: 0:00:09.915284
+(2) SR WIP cleaning operation progress:  20%|██████████████████████████████▏                                                                                                                           | 1242/6340 [00:10<00:42, 120.31it/s]
+(5) RE WIP cleaning operation at 50% (2124 items to clean) T: 0:00:10.091852
+(2) SR WIP cleaning operation progress:  22%|█████████████████████████████████▊                                                                                                                         | 1381/6340 [00:12<00:59, 82.91it/s]
+(4) SR WIP cleaning operation at 25% (5435 items to clean) T: 0:00:11.868602
+(2) SR WIP cleaning operation progress:  22%|██████████████████████████████████▎                                                                                                                        | 1406/6340 [00:12<01:18, 63.07it/s]
+(1) SR WIP cleaning operation at 50% (2717 items to clean) T: 0:00:12.835935
+
+(5) RE WIP cleaning operation at 60% (2124 items to clean) T: 0:00:12.302787
+(2) SR WIP cleaning operation progress:  23%|███████████████████████████████████▎                                                                                                                       | 1446/6340 [00:13<01:23, 58.89it/s]
+(3) SR WIP cleaning operation at 40% (3623 items to clean) T: 0:00:13.327273
+(2) SR WIP cleaning operation progress:  24%|█████████████████████████████████████▍                                                                                                                    | 1539/6340 [00:14<00:40, 118.62it/s]
+(1) SR WIP cleaning operation at 60% (2717 items to clean) T: 0:00:14.606556
+(2) SR WIP cleaning operation progress:  25%|█████████████████████████████████████▊                                                                                                                    | 1555/6340 [00:14<00:37, 128.57it/s]
+(5) RE WIP cleaning operation at 75% (2124 items to clean) T: 0:00:14.145292
+(2) SR WIP cleaning operation progress:  25%|██████████████████████████████████████▋                                                                                                                   | 1592/6340 [00:15<00:45, 104.32it/s]
+(5) RE WIP cleaning operation at 80% (2124 items to clean) T: 0:00:14.505007
+(2) SR WIP cleaning operation progress:  26%|████████████████████████████████████████▏                                                                                                                 | 1652/6340 [00:15<00:44, 106.23it/s]
+(4) SR WIP cleaning operation at 30% (5435 items to clean) T: 0:00:15.127722
+(2) SR WIP cleaning operation progress:  28%|███████████████████████████████████████████                                                                                                                | 1761/6340 [00:16<01:01, 74.59it/s]
+(1) SR WIP cleaning operation at 75% (2717 items to clean) T: 0:00:16.885122
+(2) SR WIP cleaning operation progress:  28%|███████████████████████████████████████████▊                                                                                                               | 1793/6340 [00:17<01:06, 68.79it/s]
+(5) RE WIP cleaning operation at 90% (2124 items to clean) T: 0:00:16.712016
+(2) SR WIP cleaning operation progress:  28%|████████████████████████████████████████████                                                                                                               | 1800/6340 [00:17<01:07, 67.04it/s]
+(3) SR WIP cleaning operation at 50% (3623 items to clean) T: 0:00:17.214796
+(2) SR WIP cleaning operation progress:  29%|████████████████████████████████████████████▋                                                                                                              | 1828/6340 [00:18<01:15, 59.65it/s]
+(1) SR WIP cleaning operation at 80% (2717 items to clean) T: 0:00:17.926046
+(2) SR WIP cleaning operation progress:  29%|████████████████████████████████████████████▊                                                                                                              | 1834/6340 [00:18<01:16, 58.99it/s]
+(5) RE WIP cleaning operation at 95% (2124 items to clean) T: 0:00:17.483214
+(2) SR WIP cleaning operation progress:  30%|██████████████████████████████████████████████                                                                                                             | 1883/6340 [00:18<01:10, 62.78it/s]
+(5) RE WIP cleaning operation at 100%. Duration: 0:00:18.286998
+
+
+Allocating the cleaned (5)RE WIP data - 1 items:
+
+(2) SR WIP cleaning operation progress:  30%|██████████████████████████████████████████████▍                                                                                                            | 1897/6340 [00:19<01:12, 61.70it/s]INFO:transform:(1) Initialized the (5)RE WIP dataframe from the tuples. T: 0:00:00.170593
+18,479 items in (5)RE WIP dataframe (1)
+INFO:transform:(1) (5)RE WIP: Calendar dwell time calculations complete. T: 0:00:00.001309
+(2) SR WIP cleaning operation progress:  30%|███████████████████████████████████████████████                                                                                                            | 1925/6340 [00:19<00:54, 81.39it/s]INFO:transform:(1) (5)RE WIP: Working time dwell time calculations complete. T: 0:00:00.365420
+(1) Assigning the (5)RE process areas: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 1333.43it/s]
+(2) SR WIP cleaning operation progress:  31%|███████████████████████████████████████████████▎                                                                                                           | 1934/6340 [00:19<00:58, 75.04it/s]INFO:transform:(1) (5)RE WIP: Datetime conversions to string complete. T: 0:00:00.098064
+Concatenating the (5)RE dataframes in the background...
+Cleaned (5)RE WIP data allocation completed successfully in 0:00:00.668129
+
+(5) RE INSERT Process:
+
+(2) SR WIP cleaning operation progress:  31%|███████████████████████████████████████████████▉                                                                                                           | 1962/6340 [00:19<01:05, 67.24it/s]
+(3) SR WIP cleaning operation at 60% (3623 items to clean) T: 0:00:19.652213
+Parsing through (5)RE WIP values (big chunk): 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 18/18 [00:00<00:00, 2571.88it/s]
+Parsing through (5)RE WIP values (small chunk): 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 479/479 [00:00<?, ?it/s]
+(2) SR WIP cleaning operation progress:  32%|█████████████████████████████████████████████████▎                                                                                                         | 2016/6340 [00:20<01:01, 70.84it/s]
+(5) RE WIP INSERT operation is running on the background. Progress will show intermittently
+
+(2) SR WIP cleaning operation progress:  32%|██████████████████████████████████████████████████▎                                                                                                        | 2056/6340 [00:21<01:03, 67.00it/s]
+(5) RE WIP INSERT operation at 5% (18 items) T: 0:00:00.699409
+(2) SR WIP cleaning operation progress:  33%|██████████████████████████████████████████████████▋                                                                                                        | 2071/6340 [00:21<01:02, 68.31it/s]
+(1) SR WIP cleaning operation at 90% (2717 items to clean) T: 0:00:21.524983
+(2) SR WIP cleaning operation progress:  33%|███████████████████████████████████████████████████▎                                                                                                       | 2099/6340 [00:22<01:08, 61.70it/s]
+(5) RE WIP INSERT operation at 10% (18 items) T: 0:00:01.352904
+
+(4) SR WIP cleaning operation at 40% (5435 items to clean) T: 0:00:21.461577
+(2) SR WIP cleaning operation progress:  34%|█████████████████████████████████████████████████████▍                                                                                                     | 2187/6340 [00:23<00:49, 83.50it/s]
+(1) SR WIP cleaning operation at 95% (2717 items to clean) T: 0:00:22.960406
+(2) SR WIP cleaning operation progress:  35%|█████████████████████████████████████████████████████▉                                                                                                     | 2205/6340 [00:23<00:49, 83.07it/s]
+(5) RE WIP INSERT operation at 20% (18 items) T: 0:00:02.665097
+(2) SR WIP cleaning operation progress:  36%|███████████████████████████████████████████████████████                                                                                                    | 2254/6340 [00:23<00:54, 75.25it/s]
+(5) RE WIP INSERT operation at 25% (18 items) T: 0:00:03.361100
+
+(2) SR WIP cleaning operation progress:  36%|███████████████████████████████████████████████████████▎                                                                                                   | 2262/6340 [00:24<00:55, 74.07it/s]
+(2) SR WIP cleaning operation progress:  36%|███████████████████████████████████████████████████████▍                                                                                                   | 2270/6340 [00:24<00:57, 70.22it/s]
+(1) SR WIP cleaning operation at 100%. Duration: 0:00:24.116767
+
+
+Allocating the cleaned (1)SR WIP data - 1 items:
+
+(2) SR WIP cleaning operation progress:  36%|███████████████████████████████████████████████████████▋                                                                                                   | 2278/6340 [00:24<01:02, 65.11it/s]INFO:transform:(1) Initialized the (1)SR WIP dataframe from the tuples. T: 0:00:00.192000
+21,236 items in (1)SR WIP dataframe (1)
+INFO:transform:(1) (1)SR WIP: Calendar dwell time calculations complete. T: 0:00:00.003000
+(2) SR WIP cleaning operation progress:  36%|███████████████████████████████████████████████████████▊                                                                                                   | 2285/6340 [00:24<01:06, 60.61it/s]
+(5) RE WIP INSERT operation at 30% (18 items) T: 0:00:03.914639
+(2) SR WIP cleaning operation progress:  36%|████████████████████████████████████████████████████████▍                                                                                                  | 2310/6340 [00:24<00:56, 71.91it/s]INFO:transform:(1) (1)SR WIP: Working time dwell time calculations complete. T: 0:00:00.484000
+(1) Assigning the (1)SR process areas: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 1333.32it/s]
+(2) SR WIP cleaning operation progress:  37%|████████████████████████████████████████████████████████▋                                                                                                  | 2318/6340 [00:24<00:56, 71.77it/s]INFO:transform:(1) (1)SR WIP: Datetime conversions to string complete. T: 0:00:00.150000
+Concatenating the (1)SR dataframes in the background...
+Cleaned (1)SR WIP data allocation completed successfully in 0:00:00.855000
+
+(1) SR INSERT Process:
+
+(2) SR WIP cleaning operation progress:  37%|██████████████████████████████████████████████████████████                                                                                                 | 2373/6340 [00:25<00:56, 69.63it/s]
+(5) RE WIP INSERT operation at 40% (18 items) T: 0:00:05.143638
+(2) SR WIP cleaning operation progress:  38%|██████████████████████████████████████████████████████████▎                                                                                                | 2383/6340 [00:25<00:51, 76.13it/s]
+(3) SR WIP cleaning operation at 80% (3623 items to clean) T: 0:00:25.540713
+Parsing through (1)SR WIP values (big chunk): 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 21/21 [00:00<00:00, 2625.11it/s]
+Parsing through (1)SR WIP values (small chunk): 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 236/236 [00:00<?, ?it/s]
+(2) SR WIP cleaning operation progress:  38%|██████████████████████████████████████████████████████████▊                                                                                                | 2408/6340 [00:26<00:44, 88.24it/s]
+(1) SR WIP INSERT operation is running on the background. Progress will show intermittently
+
+(2) SR WIP cleaning operation progress:  39%|███████████████████████████████████████████████████████████▋                                                                                              | 2457/6340 [00:26<00:35, 110.47it/s]
+(5) RE WIP INSERT operation at 50% (18 items) T: 0:00:05.900914
+(2) SR WIP cleaning operation progress:  40%|█████████████████████████████████████████████████████████████▋                                                                                             | 2521/6340 [00:27<00:40, 93.94it/s]
+(1) SR WIP INSERT operation at 5% (21 items) T: 0:00:01.137222
+(2) SR WIP cleaning operation progress:  40%|██████████████████████████████████████████████████████████████▎                                                                                           | 2565/6340 [00:27<00:35, 106.06it/s]
+(5) RE WIP INSERT operation at 60% (18 items) T: 0:00:07.090184
+(2) SR WIP cleaning operation progress:  41%|██████████████████████████████████████████████████████████████▌                                                                                           | 2576/6340 [00:27<00:36, 103.31it/s]
+(1) SR WIP INSERT operation at 10% (21 items) T: 0:00:01.763544
+(2) SR WIP cleaning operation progress:  42%|█████████████████████████████████████████████████████████████████▏                                                                                         | 2668/6340 [00:28<00:38, 96.37it/s]
+(4) SR WIP cleaning operation at 50% (5435 items to clean) T: 0:00:28.162734
+(2) SR WIP cleaning operation progress:  42%|█████████████████████████████████████████████████████████████████▋                                                                                         | 2688/6340 [00:29<00:41, 87.58it/s]
+(1) SR WIP INSERT operation at 20% (21 items) T: 0:00:02.939570
+(2) SR WIP cleaning operation progress:  43%|██████████████████████████████████████████████████████████████████▊                                                                                        | 2731/6340 [00:29<00:36, 98.19it/s]
+(5) RE WIP INSERT operation at 75% (18 items) T: 0:00:08.832937
+(2) SR WIP cleaning operation progress:  43%|███████████████████████████████████████████████████████████████████                                                                                        | 2741/6340 [00:29<00:40, 87.87it/s]
+(1) SR WIP INSERT operation at 25% (21 items) T: 0:00:03.562489
+(2) SR WIP cleaning operation progress:  44%|███████████████████████████████████████████████████████████████████▊                                                                                       | 2774/6340 [00:30<00:55, 64.76it/s]
+(5) RE WIP INSERT operation at 80% (18 items) T: 0:00:09.531053
+(2) SR WIP cleaning operation progress:  44%|███████████████████████████████████████████████████████████████████▉                                                                                       | 2781/6340 [00:30<00:56, 62.96it/s]
+(1) SR WIP INSERT operation at 30% (21 items) T: 0:00:04.138414
+(2) SR WIP cleaning operation progress:  44%|████████████████████████████████████████████████████████████████████▊                                                                                      | 2816/6340 [00:30<00:57, 61.36it/s]
+(3) SR WIP cleaning operation at 90% (3623 items to clean) T: 0:00:30.591101
+(2) SR WIP cleaning operation progress:  45%|██████████████████████████████████████████████████████████████████████▏                                                                                    | 2870/6340 [00:31<00:37, 92.91it/s]
+(1) SR WIP INSERT operation at 40% (21 items) T: 0:00:05.342616
+
+(5) RE WIP INSERT operation at 90% (18 items) T: 0:00:10.835346
+(2) SR WIP cleaning operation progress:  46%|███████████████████████████████████████████████████████████████████████▋                                                                                   | 2934/6340 [00:32<00:35, 95.49it/s](5) BULK INSERT - WARNING: This zone is locked
+(2) SR WIP cleaning operation progress:  47%|████████████████████████████████████████████████████████████████████████▏                                                                                  | 2954/6340 [00:32<00:39, 85.69it/s]
+(4) SR WIP cleaning operation at 60% (5435 items to clean) T: 0:00:31.885296
+
+(3) SR WIP cleaning operation at 95% (3623 items to clean) T: 0:00:32.181268
+(2) SR WIP cleaning operation progress:  47%|████████████████████████████████████████████████████████████████████████▍                                                                                  | 2963/6340 [00:32<00:42, 79.90it/s]
+(5) RE WIP INSERT operation at 95% (18 items) T: 0:00:11.893290
+
+(5) RE WIP INSERT operation at 100%. Duration: 0:00:11.894299
+
+Inserting an additional small size (479 rows) of (5) RE WIP records in the background...
+WARNING: This zone is locked
+
+(1) SR WIP INSERT operation at 50% (21 items) T: 0:00:06.547750
+(2) SR WIP cleaning operation progress:  47%|████████████████████████████████████████████████████████████████████████▊                                                                                  | 2980/6340 [00:32<00:44, 75.62it/s]
+(5) RE INSERT Operation ran successfully.
+T: 0:00:12.193309
+
+(2) SR WIP cleaning operation progress:  48%|███████████████████████████████████████████████████████████████████████████                                                                                | 3069/6340 [00:33<00:35, 91.29it/s]
+(1) SR WIP INSERT operation at 60% (21 items) T: 0:00:07.669670
+(2) SR WIP cleaning operation progress:  49%|███████████████████████████████████████████████████████████████████████████▏                                                                              | 3096/6340 [00:34<00:28, 112.39it/s]
+(3) SR WIP cleaning operation at 100%. Duration: 0:00:33.636019
+
+
+Allocating the cleaned (3)SR WIP data - 1 items:
+
+(2) SR WIP cleaning operation progress:  49%|███████████████████████████████████████████████████████████████████████████▍                                                                              | 3108/6340 [00:34<00:30, 104.98it/s]INFO:transform:(1) Initialized the (3)SR WIP dataframe from the tuples. T: 0:00:00.224078
+28,118 items in (3)SR WIP dataframe (1)
+INFO:transform:(1) (3)SR WIP: Calendar dwell time calculations complete. T: 0:00:00.002092
+(2) SR WIP cleaning operation progress:  50%|████████████████████████████████████████████████████████████████████████████▊                                                                             | 3163/6340 [00:34<00:31, 100.63it/s]INFO:transform:(1) (3)SR WIP: Working time dwell time calculations complete. T: 0:00:00.543644
+(1) Assigning the (3)SR process areas: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 1008.97it/s]
+(2) SR WIP cleaning operation progress:  50%|█████████████████████████████████████████████████████████████████████████████▊                                                                             | 3185/6340 [00:34<00:31, 99.45it/s]INFO:transform:(1) (3)SR WIP: Datetime conversions to string complete. T: 0:00:00.174684
+Concatenating the (3)SR dataframes in the background...
+Cleaned (3)SR WIP data allocation completed successfully in 0:00:00.978413
+
+(3) SR INSERT Process:
+
+(2) SR WIP cleaning operation progress:  51%|██████████████████████████████████████████████████████████████████████████████▉                                                                           | 3250/6340 [00:35<00:29, 104.00it/s]
+(1) SR WIP INSERT operation at 75% (21 items) T: 0:00:09.437425
+Parsing through (3)SR WIP values (big chunk): 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 28/28 [00:00<00:00, 3111.25it/s]
+Parsing through (3)SR WIP values (small chunk): 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 118/118 [00:00<?, ?it/s]
+(2) SR WIP cleaning operation progress:  52%|████████████████████████████████████████████████████████████████████████████████▋                                                                          | 3302/6340 [00:36<00:31, 96.60it/s]
+(1) SR WIP INSERT operation at 80% (21 items) T: 0:00:09.986928
+(2) SR WIP cleaning operation progress:  52%|████████████████████████████████████████████████████████████████████████████████▉                                                                          | 3313/6340 [00:36<00:30, 99.52it/s]
+(3) SR WIP INSERT operation is running on the background. Progress will show intermittently
+
+(2) SR WIP cleaning operation progress:  55%|████████████████████████████████████████████████████████████████████████████████████▌                                                                     | 3479/6340 [00:37<00:16, 175.91it/s]
+(1) SR WIP INSERT operation at 90% (21 items) T: 0:00:11.156201
+(2) SR WIP cleaning operation progress:  55%|█████████████████████████████████████████████████████████████████████████████████████▍                                                                    | 3515/6340 [00:37<00:18, 151.50it/s]
+(3) SR WIP INSERT operation at 5% (28 items) T: 0:00:01.290466
+(2) SR WIP cleaning operation progress:  56%|█████████████████████████████████████████████████████████████████████████████████████▊                                                                    | 3531/6340 [00:37<00:18, 150.14it/s]
+(4) SR WIP cleaning operation at 75% (5435 items to clean) T: 0:00:36.993534
+(2) SR WIP cleaning operation progress:  56%|██████████████████████████████████████████████████████████████████████████████████████▉                                                                   | 3578/6340 [00:37<00:19, 143.08it/s]
+(1) SR WIP INSERT operation at 95% (21 items) T: 0:00:11.749985
+(2) SR WIP cleaning operation progress:  57%|███████████████████████████████████████████████████████████████████████████████████████▋                                                                  | 3608/6340 [00:38<00:19, 143.63it/s]
+(3) SR WIP INSERT operation at 10% (28 items) T: 0:00:01.879450
+(2) SR WIP cleaning operation progress:  58%|█████████████████████████████████████████████████████████████████████████████████████████▌                                                                | 3689/6340 [00:38<00:11, 227.22it/s](1) BULK INSERT - WARNING: This zone is locked
+(2) SR WIP cleaning operation progress:  60%|████████████████████████████████████████████████████████████████████████████████████████████▍                                                             | 3803/6340 [00:38<00:09, 267.40it/s]
+(1) SR WIP INSERT operation at 100%. Duration: 0:00:12.750089
+
+Inserting an additional small size (236 rows) of (1) SR WIP records in the background...
+WARNING: This zone is locked
+(2) SR WIP cleaning operation progress:  60%|█████████████████████████████████████████████████████████████████████████████████████████████▏                                                            | 3834/6340 [00:38<00:08, 279.01it/s]
+(1) SR INSERT Operation ran successfully.
+T: 0:00:12.879383
+
+(2) SR WIP cleaning operation progress:  62%|███████████████████████████████████████████████████████████████████████████████████████████████▋                                                          | 3938/6340 [00:39<00:11, 213.27it/s]
+(4) SR WIP cleaning operation at 80% (5435 items to clean) T: 0:00:38.944732
+(2) SR WIP cleaning operation progress:  64%|██████████████████████████████████████████████████████████████████████████████████████████████████▏                                                       | 4042/6340 [00:39<00:09, 249.19it/s]
+(3) SR WIP INSERT operation at 20% (28 items) T: 0:00:03.644120
+(2) SR WIP cleaning operation progress:  66%|█████████████████████████████████████████████████████████████████████████████████████████████████████▍                                                    | 4177/6340 [00:40<00:09, 230.78it/s]
+(3) SR WIP INSERT operation at 25% (28 items) T: 0:00:04.260989
+(2) SR WIP cleaning operation progress:  71%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████▏                                            | 4496/6340 [00:41<00:08, 223.11it/s]
+(3) SR WIP INSERT operation at 30% (28 items) T: 0:00:05.597738
+(2) SR WIP cleaning operation progress:  74%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████▋                                        | 4682/6340 [00:43<00:16, 102.67it/s]
+(3) SR WIP INSERT operation at 40% (28 items) T: 0:00:07.412125
+(2) SR WIP cleaning operation progress:  77%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▌                                   | 4880/6340 [00:44<00:10, 145.58it/s]
+(3) SR WIP INSERT operation at 50% (28 items) T: 0:00:08.587687
+(2) SR WIP cleaning operation progress:  79%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏                               | 5032/6340 [00:45<00:09, 140.72it/s]
+(4) SR WIP cleaning operation at 90% (5435 items to clean) T: 0:00:45.151555
+(2) SR WIP cleaning operation progress:  81%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍                             | 5121/6340 [00:46<00:10, 121.09it/s]
+(3) SR WIP INSERT operation at 60% (28 items) T: 0:00:10.337344
+(2) SR WIP cleaning operation progress:  83%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏                          | 5243/6340 [00:47<00:12, 84.60it/s]
+(4) SR WIP cleaning operation at 95% (5435 items to clean) T: 0:00:47.341609
+(2) SR WIP cleaning operation progress:  84%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████                         | 5322/6340 [00:48<00:11, 86.52it/s]
+(3) SR WIP INSERT operation at 75% (28 items) T: 0:00:12.659489
+(2) SR WIP cleaning operation progress:  85%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊                       | 5390/6340 [00:49<00:10, 86.64it/s]
+(4) SR WIP cleaning operation at 100%. Duration: 0:00:49.118382
+
+
+Allocating the cleaned (4)SR WIP data - 1 items:
+
+(2) SR WIP cleaning operation progress:  85%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏                      | 5408/6340 [00:49<00:11, 79.39it/s]
+(3) SR WIP INSERT operation at 80% (28 items) T: 0:00:13.739680
+(2) SR WIP cleaning operation progress:  85%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍                      | 5417/6340 [00:50<00:11, 79.83it/s]INFO:transform:(1) Initialized the (4)SR WIP dataframe from the tuples. T: 0:00:00.314255
+42,990 items in (4)SR WIP dataframe (1)
+INFO:transform:(1) (4)SR WIP: Calendar dwell time calculations complete. T: 0:00:00.002999
+(2) SR WIP cleaning operation progress:  86%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊                     | 5475/6340 [00:50<00:11, 72.45it/s]INFO:transform:(1) (4)SR WIP: Working time dwell time calculations complete. T: 0:00:00.789326
+(1) Assigning the (4)SR process areas: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 1337.79it/s]
+(2) SR WIP cleaning operation progress:  87%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏                    | 5490/6340 [00:51<00:13, 61.20it/s]INFO:transform:(1) (4)SR WIP: Datetime conversions to string complete. T: 0:00:00.244657
+Concatenating the (4)SR dataframes in the background...
+Cleaned (4)SR WIP data allocation completed successfully in 0:00:01.389271
+
+(4) SR INSERT Process:
+
+(2) SR WIP cleaning operation progress:  87%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████                    | 5527/6340 [00:51<00:11, 73.10it/s]
+(3) SR WIP INSERT operation at 90% (28 items) T: 0:00:15.393864
+(2) SR WIP cleaning operation progress:  88%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▎                  | 5574/6340 [00:52<00:09, 83.76it/s]
+(3) SR WIP INSERT operation at 95% (28 items) T: 0:00:15.934930
+Parsing through (4)SR WIP values (big chunk): 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 42/42 [00:00<00:00, 3500.32it/s]
+Parsing through (4)SR WIP values (small chunk): 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 990/990 [00:00<?, ?it/s]
+(2) SR WIP cleaning operation progress:  89%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▏                 | 5613/6340 [00:52<00:08, 86.76it/s]
+(4) SR WIP INSERT operation is running on the background. Progress will show intermittently
+
+(2) SR WIP cleaning operation progress:  89%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍                 | 5624/6340 [00:52<00:07, 90.95it/s](3) BULK INSERT - WARNING: This zone is locked
+(2) SR WIP cleaning operation progress:  90%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████                | 5684/6340 [00:53<00:05, 114.97it/s]
+(3) SR WIP INSERT operation at 100%. Duration: 0:00:17.012775
+
+Inserting an additional small size (118 rows) of (3) SR WIP records in the background...
+WARNING: This zone is locked
+(2) SR WIP cleaning operation progress:  90%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊               | 5715/6340 [00:53<00:03, 165.39it/s]
+(3) SR INSERT Operation ran successfully.
+T: 0:00:17.097775
+
+(2) SR WIP cleaning operation progress:  92%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍            | 5823/6340 [00:54<00:04, 110.49it/s]
+(4) SR WIP INSERT operation at 5% (42 items) T: 0:00:01.621929
+(2) SR WIP cleaning operation progress:  94%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍        | 5987/6340 [00:55<00:02, 144.70it/s]
+(4) SR WIP INSERT operation at 10% (42 items) T: 0:00:02.679278
+(2) SR WIP cleaning operation progress: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 6340/6340 [00:57<00:00, 110.93it/s]
+
+Allocating the cleaned (2)SR WIP data - 1 items:
+
+INFO:transform:(1) Initialized the (2)SR WIP dataframe from the tuples. T: 0:00:00.290959
+48,995 items in (2)SR WIP dataframe (1)
+INFO:transform:(1) (2)SR WIP: Calendar dwell time calculations complete. T: 0:00:00.002029
+
+(4) SR WIP INSERT operation at 20% (42 items) T: 0:00:04.817117
+INFO:transform:(1) (2)SR WIP: Working time dwell time calculations complete. T: 0:00:00.715099
+(1) Assigning the (2)SR process areas: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:00<00:00, 798.61it/s]
+INFO:transform:(1) (2)SR WIP: Datetime conversions to string complete. T: 0:00:00.239077
+Concatenating the (2)SR dataframes in the background...
+Cleaned (2)SR WIP data allocation completed successfully in 0:00:01.292910
+
+(2) SR INSERT Process:
+
+
+(4) SR WIP INSERT operation at 25% (42 items) T: 0:00:05.871591
+
+(4) SR WIP INSERT operation at 30% (42 items) T: 0:00:06.941540
+Parsing through (2)SR WIP values (big chunk): 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 48/48 [00:00<00:00, 4350.28it/s]
+Parsing through (2)SR WIP values (small chunk): 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 995/995 [00:00<00:00, 954340.84it/s]
+INSERTING new (2) SR WIP records in chunks:   6%|█████████▊                                                                                                                                                  | 3/48 [00:01<00:24,  1.83it/s]
+(4) SR WIP INSERT operation at 40% (42 items) T: 0:00:09.111549
+INSERTING new (2) SR WIP records in chunks:  15%|██████████████████████▊                                                                                                                                     | 7/48 [00:03<00:22,  1.79it/s]
+(4) SR WIP INSERT operation at 50% (42 items) T: 0:00:11.273663
+INSERTING new (2) SR WIP records in chunks:  25%|██████████████████████████████████████▊                                                                                                                    | 12/48 [00:06<00:20,  1.79it/s]
+(4) SR WIP INSERT operation at 60% (42 items) T: 0:00:13.966898
+INSERTING new (2) SR WIP records in chunks:  38%|██████████████████████████████████████████████████████████▏                                                                                                | 18/48 [00:10<00:17,  1.76it/s]
+(4) SR WIP INSERT operation at 75% (42 items) T: 0:00:17.389693
+INSERTING new (2) SR WIP records in chunks:  42%|████████████████████████████████████████████████████████████████▌                                                                                          | 20/48 [00:11<00:16,  1.75it/s]
+(4) SR WIP INSERT operation at 80% (42 items) T: 0:00:18.552561
+INSERTING new (2) SR WIP records in chunks:  48%|██████████████████████████████████████████████████████████████████████████▎                                                                                | 23/48 [00:12<00:14,  1.78it/s]
+(4) SR WIP INSERT operation at 90% (42 items) T: 0:00:20.779327
+INSERTING new (2) SR WIP records in chunks:  52%|████████████████████████████████████████████████████████████████████████████████▋                                                                          | 25/48 [00:14<00:13,  1.72it/s]
+(4) SR WIP INSERT operation at 95% (42 items) T: 0:00:21.933827
+INSERTING new (2) SR WIP records in chunks:  56%|███████████████████████████████████████████████████████████████████████████████████████▏                                                                   | 27/48 [00:15<00:12,  1.73it/s](4) BULK INSERT - WARNING: This zone is locked
+INSERTING new (2) SR WIP records in chunks:  60%|█████████████████████████████████████████████████████████████████████████████████████████████▋                                                             | 29/48 [00:16<00:10,  1.79it/s]
+(4) SR WIP INSERT operation at 100%. Duration: 0:00:23.833151
+
+Inserting an additional small size (990 rows) of (4) SR WIP records in the background...
+WARNING: This zone is locked
+INSERTING new (2) SR WIP records in chunks:  62%|████████████████████████████████████████████████████████████████████████████████████████████████▉                                                          | 30/48 [00:16<00:09,  1.81it/s]
+(4) SR INSERT Operation ran successfully.
+T: 0:00:24.444190
+
+INSERTING new (2) SR WIP records in chunks:  98%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▊   | 47/48 [00:26<00:00,  1.87it/s](2) BULK INSERT - WARNING: This zone is locked
+INSERTING new (2) SR WIP records in chunks: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 48/48 [00:27<00:00,  1.75it/s]
+Inserting an additional small size (995 rows) of (2) SR WIP records in the background...
+WARNING: This zone is locked
+
+(2) SR INSERT Operation ran successfully.
+T: 0:00:28.290268
+
+Updating Order Type and Factory status NULL values in the background...
+
+UPDATE operation ran successfully
+T: 0:00:00.386288
+
+DB Connection ran successfully
+
+
+The DB CONNECTION closed successfully
+Goodbye!
+Total program duration: 0:01:43.301985

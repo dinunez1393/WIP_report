@@ -22,9 +22,10 @@ DATABASE_NAME_sbi = 'SBILearning'
 
 def load_wip_data(wip_df, lock, to_csv=False, isServer=True):
     """
-    Function to load new cleaned data to SQL table either indirectly, via CSV, or directly, via INSERT query
+    Function to load new cleaned data to SQL table either indirectly, via CSV, or directly, via INSERT query.
     For SQL INSERT: The data is first inserted to temporary tables carrying in their names the process number, hence
-    allowing parallel insertion. Then, all the data from the temp table is bulk inserted into the main SQL WIP table.
+    allowing pseudo-parallel insertion.
+    Then, all the data from the temp table is bulk inserted into the main SQL WIP table.
     :param wip_df: A dataframe containing the cleaned WIP records
     :type wip_df: pandas.Dataframe
     :param lock: A lock for the process that will be used to upload the data to SQL
@@ -158,15 +159,20 @@ def load_wip_data(wip_df, lock, to_csv=False, isServer=True):
                                 counter += 1
                                 # Bulk INSERT
                                 if (counter % BULK_SIZE) == 0 or counter == upload_size:
-                                    with lock:
-                                        print(f"({pro_num}) {'SR' if isServer else 'RE'} "
-                                              f"BULK INSERT {bulk_counter}/{upload_size // BULK_SIZE} "
-                                              f"- WARNING: This zone is locked")
+                                    print(f"\n({pro_num}) {'SR' if isServer else 'RE'} "
+                                          f"BULK INSERT {bulk_counter}/{upload_size // BULK_SIZE} "
+                                          f"- WARNING: This zone is locked")
+                                    # Prevent deadlocks by waiting maximum 1:40 minutes if lock is being used
+                                    if lock.acquire(timeout=100.999):
                                         cursor.execute(insert_query_main)
-                                    cursor.execute(truncate_query_temp)
+                                        cursor.execute(truncate_query_temp)
+                                        lock.release()
+                                    else:
+                                        print(f"\n({pro_num})FATAL ERROR - Lock could not be acquired")
                                     bulk_counter += 1
                                     if counter == upload_size:  # End of big load insertion
                                         cursor.execute(drop_query_temp)
+                                        print(f"\n({pro_num}) DROPPED temp {'SR' if isServer else 'RE'} WIP table")
 
                         else:  # SQL upload for RE data and SR data - Processes 1 & 3
                             insert_start = dt.now()
@@ -184,15 +190,20 @@ def load_wip_data(wip_df, lock, to_csv=False, isServer=True):
                                 counter += 1
                                 # Bulk INSERT
                                 if (counter % BULK_SIZE) == 0 or counter == upload_size:
-                                    with lock:
-                                        print(f"({pro_num}) {'SR' if isServer else 'RE'} "
-                                              f"BULK INSERT {bulk_counter}/{upload_size // BULK_SIZE} "
-                                              f"- WARNING: This zone is locked")
+                                    print(f"\n({pro_num}) {'SR' if isServer else 'RE'} "
+                                          f"BULK INSERT {bulk_counter}/{upload_size // BULK_SIZE} "
+                                          f"- WARNING: This zone is locked")
+                                    # Prevent deadlocks by waiting maximum 1:40 minutes if lock is being used
+                                    if lock.acquire(timeout=100.999):
                                         cursor.execute(insert_query_main)
-                                    cursor.execute(truncate_query_temp)
+                                        cursor.execute(truncate_query_temp)
+                                        lock.release()
+                                    else:
+                                        print(f"\n({pro_num})FATAL ERROR - Lock could not be acquired")
                                     bulk_counter += 1
                                     if counter == upload_size:  # End of big load insertion
                                         cursor.execute(drop_query_temp)
+                                        print(f"\n({pro_num}) DROPPED temp {'SR' if isServer else 'RE'} WIP table")
 
                                 # Progress feedback
                                 current_progress = (index + 1) / upload_size
