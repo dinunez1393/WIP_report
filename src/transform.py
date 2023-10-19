@@ -182,10 +182,12 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
 
 
-def assign_wip(process_lock, isServerLevel=True):
+def assign_wip(semaphore, process_lock, isServerLevel=True):
     """
     Function that cleans the processed raw data to make a full WIP report and uses another function to
      export the cleaned data to SQL or CSV
+    :param semaphore: Semaphore for limiting the number of concurrent loading processes
+    :type semaphore: multiprocessing.Semaphore
     :param process_lock: A lock for the process that will be used to upload the data to SQL
     :type process_lock: multiprocessing.Lock
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
@@ -373,7 +375,10 @@ def assign_wip(process_lock, isServerLevel=True):
           f"{dt.now() - allocation_start}\n")
 
     # Load results
-    load_wip_data(final_wip_df, process_lock, to_csv=False, isServer=isServerLevel)
+    logger.info(f"INSERTING ({pro_num}){'SR' if isServerLevel else 'RE'} WIP data - SEMAPHORE WARNING: "
+                f"This zone is limited to MAX 2 concurrent processes ({dt.now()})")
+    with semaphore:
+        load_wip_data(final_wip_df, process_lock, to_csv=False, isServer=isServerLevel)
 
 
 def assign_shipmentStatus(db_conn):

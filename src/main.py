@@ -107,12 +107,14 @@ if __name__ == '__main__':
 
         else:  # Perform transformation and loading
             # Clean the data in multiple processes and make a WIP report
-            lock = multiprocessing.Lock()
-            process_1_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_1")
-            process_2_sr = multiprocessing.Process(target=assign_wip,  args=(lock,), name="SR_Pro_2")
-            process_3_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_3")
-            process_4_sr = multiprocessing.Process(target=assign_wip, args=(lock,), name="SR_Pro_4")
-            process_re = multiprocessing.Process(target=assign_wip, args=(lock, False), name="RE_Pro")
+            semaphore = multiprocessing.Semaphore(2)  # Semaphore with counter value of 2 ensures only up to 2 processes
+            # access the loading function concurrently
+            lock = multiprocessing.Lock()  # Lock prevents concurrent insertion into the same SQL table
+            process_1_sr = multiprocessing.Process(target=assign_wip, args=(semaphore, lock), name="SR_Pro_1")
+            process_2_sr = multiprocessing.Process(target=assign_wip,  args=(semaphore, lock), name="SR_Pro_2")
+            process_3_sr = multiprocessing.Process(target=assign_wip, args=(semaphore, lock), name="SR_Pro_3")
+            process_4_sr = multiprocessing.Process(target=assign_wip, args=(semaphore, lock), name="SR_Pro_4")
+            process_re = multiprocessing.Process(target=assign_wip, args=(semaphore, lock, False), name="RE_Pro")
 
             process_1_sr.start()
             process_2_sr.start()

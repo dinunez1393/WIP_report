@@ -163,7 +163,7 @@ def items_to_SQL_values(collection, isForUpdate=True, chunk_size=1_000):
 
 def df_splitter(dataframe, category_name='SerialNumber'):
     """
-    Function splits a dataframe by category into four (15%-35%-20%-30%)
+    Function splits a dataframe by category into four even partitions
     :param dataframe: The dataframe to be split into four
     :type dataframe: pandas.Dataframe
     :param category_name: The column name of the category to use for the splitting
@@ -172,8 +172,8 @@ def df_splitter(dataframe, category_name='SerialNumber'):
     :rtype: tuple
     """
     unique_categories = list(set(dataframe[category_name]))
-    partition_sizes = (int(len(unique_categories) * 0.15), int(len(unique_categories) * 0.5),
-                       int(len(unique_categories) * 0.7))
+    partition_sizes = (int(len(unique_categories) * 0.25), int(len(unique_categories) * 0.5),
+                       int(len(unique_categories) * 0.75))
     division_1 = unique_categories[:partition_sizes[0]]
     division_2 = unique_categories[partition_sizes[0]: partition_sizes[1]]
     division_3 = unique_categories[partition_sizes[1]: partition_sizes[2]]
