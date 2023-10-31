@@ -7,8 +7,8 @@ import logging
 
 SQL_Q_ERROR = "An SQL SELECT statement error occurred"
 # To build table from scratch
-if dt.now().date() == date(2023, 10, 18):
-    DATE_THRESHOLD = dt(2023, 9, 30, 0, 0)
+if dt.now().date() == date(2023, 10, 30):
+    DATE_THRESHOLD = dt(2023, 10, 12, 0, 0)
 else:  # Normal runs
     DATE_THRESHOLD = dt.now() - timedelta(days=400)
 
@@ -61,6 +61,65 @@ def select_wip_maxDate(db_conn, snapshotTime=False):
         return max_date
 
 
+async def select_customers(async_pool):
+    """
+    Function gets all the customers with their respective stock codes from SAP and Agile.
+    :param async_pool: The asynchronous pool to access the DB
+    :return: A dataframe containing customers and stock codes
+    :rtype: pandas.Dataframe
+    """
+    query_sap = """
+                SELECT DISTINCT CUSTID AS Customer, MATNR AS StockCode
+                FROM [sapdb].[sap].[ZTFTP_ZTPOK_ProductionScheduleHeader];
+                """
+    query_azu = """
+                SELECT DISTINCT MSPARTNUM AS Customer, STOCKCODE AS StockCode
+                  FROM [ASBuiltDW].[dbo].[tbl_ref_agile_ITEM]
+                  WHERE MSPARTNUM IS NOT NULL AND MSPARTNUM != 'N/A'
+                  AND (STOCKCODE LIKE 'SR-%' OR STOCKCODE LIKE 'JB-%' OR STOCKCODE LIKE 'FR-%'
+                  OR STOCKCODE LIKE 'RE-%');
+                """
+    query_amz = """
+                SELECT DISTINCT AZPARTNUM AS Customer, STOCKCODE AS StockCode
+                  FROM [ASBuiltDW].[dbo].[tbl_ref_agile_ITEM]
+                  WHERE AZPARTNUM IS NOT NULL AND AZPARTNUM != 'N/A'
+                  AND (STOCKCODE LIKE 'SR-%' OR STOCKCODE LIKE 'JB-%' OR STOCKCODE LIKE 'FR-%'
+                  OR STOCKCODE LIKE 'RE-%');
+                """
+
+    print("SELECT process for customers information is running on the background...\n")
+    try:
+        time_tracker = dt.now()
+        async with async_pool.acquire() as db_conn:
+            async with db_conn.cursor() as cursor:
+                await cursor.execute(query_sap)
+                rows = await cursor.fetchall()
+                cols = [column[0] for column in cursor.description]
+                customers_df = pd.DataFrame.from_records(rows, columns=cols)
+
+                await cursor.execute(query_azu)
+                rows = await cursor.fetchall()
+                cols = [column[0] for column in cursor.description]
+                azu_customer_df = pd.DataFrame.from_records(rows, columns=cols)
+
+                await cursor.execute(query_amz)
+                rows = await cursor.fetchall()
+                cols = [column[0] for column in cursor.description]
+                amz_customer_df = pd.DataFrame.from_records(rows, columns=cols)
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(SQL_Q_ERROR, exc_info=True)
+        show_message(AlertType.FAILED)
+    else:
+        azu_customer_df['Customer'] = 'AZU'
+        amz_customer_df['Customer'] = 'AMZ'
+        customers_df = pd.concat([customers_df, azu_customer_df, amz_customer_df], ignore_index=True)
+        customers_df.dropna(inplace=True)
+        customers_df.drop_duplicates(subset=['StockCode'], inplace=True)
+        print(f"SELECT process for customers ran successfully. T: {dt.now() - time_tracker}\n")
+        return customers_df
+
+
 async def select_ph_rawData(async_pool, date_threshold):
     """
     SELECT function to get all the raw data from product history
@@ -110,8 +169,7 @@ async def select_ph_rawData(async_pool, date_threshold):
                            300, 301,
                            151, 234, 302);
     """
-    print("SELECT process for Server raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
-          "background...\n")
+    print("SELECT process for Server raw data from [ASBuiltDW].[dbo].[producthistory] running in the background...\n")
     try:
         time_tracker = dt.now()
         async with async_pool.acquire() as db_conn:

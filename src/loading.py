@@ -115,6 +115,7 @@ def load_wip_data(wip_df, semaphore, to_csv=False, isServer=True):
                     [OrderType] [varchar](20) NULL,
                     [FactoryStatus] [varchar](20) NULL,
                     [ProductType] [varchar](8) NOT NULL,
+                    [Customer] [varchar](5) NULL,
                     [PackedIsLast_flag] [bit] NOT NULL,
                     [PackedPreviously_flag] [bit] NOT NULL,
                     [ExtractionDate] [datetime] NOT NULL);

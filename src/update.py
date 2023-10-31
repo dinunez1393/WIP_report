@@ -122,6 +122,12 @@ def update_orderType_factoryStatus(db_conn, saved_as_csv=False):
                         WHEN [FactoryStatus] = 'NULL'
                         THEN NULL
                         ELSE [FactoryStatus]
+                    END
+                ,[Customer] =
+                    CASE
+                        WHEN [Customer] = 'NULL'
+                        THEN NULL
+                        ELSE [Customer]
                     END;    
     """
     if saved_as_csv:

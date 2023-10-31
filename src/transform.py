@@ -28,7 +28,8 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     results = await asyncio.gather(select_ph_rawData(async_pool_asbuilt, wip_maxDate),
                                    select_ph_rackBuildData(async_pool_asbuilt, wip_maxDate),
                                    select_ph_rackEoL_data(async_pool_asbuilt, wip_maxDate),
-                                   select_sap_historicalStatus(async_pool_asbuilt, wip_maxDate))
+                                   select_sap_historicalStatus(async_pool_asbuilt, wip_maxDate),
+                                   select_customers(async_pool_asbuilt))
     print(f"\nTOTAL extraction time: {dt.now() - extraction_start}")
 
     allocation_start = dt.now()
@@ -38,6 +39,7 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     re_rackBuild_df = results[1]
     re_rackEoL_df = results[2]
     sr_sap_statusH_df, re_sap_statusH_df = results[3]
+    customers_df = results[4]
 
     # Purge Rack Build, End-of-Line and Rack Hi-Pot data that might be in server data to avoid having
     # duplicates further on
@@ -177,6 +179,10 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     sr_rawData_df = sr_rawData_df.drop_duplicates(subset=['TransID'])
     re_rawData_df = re_rawData_df.drop_duplicates(subset=['TransID'])
 
+    # Assign customers
+    sr_rawData_df = sr_rawData_df.merge(customers_df, how='left', on='StockCode')
+    re_rawData_df = re_rawData_df.merge(customers_df, how='left', on='StockCode')
+
     print(f"\nTOTAL raw data allocation time: {dt.now() - allocation_start}")
 
     return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
@@ -226,7 +232,7 @@ def assign_wip(semaphore, isServerLevel=True):
     wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'SKU', 'CheckPointId',
                    'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
-                   'ProductType', 'PackedIsLast_flag', 'PackedPreviously_flag',
+                   'ProductType', 'Customer', 'PackedIsLast_flag', 'PackedPreviously_flag',
                    'ETL_time']  # 'isFrom_WIP' - Disabled indefinitely
     distinctSN_count = rawData_df['SerialNumber'].nunique()
 
