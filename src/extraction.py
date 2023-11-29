@@ -249,7 +249,8 @@ async def select_ph_rackBuildData(async_pool, date_threshold):
          AND ph.[StockCode] LIKE 'RE-%'
          AND ph.[CheckPointId] IN (200, 235, 236,
                               254, 255, 208, 209,
-                              252, 253, 201);
+                              252, 253, 201)
+         WITH (nolock);
        """
     print("SELECT process for Rack Build raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
           "background...\n")
@@ -311,7 +312,8 @@ async def select_ph_rackEoL_data(async_pool, date_threshold):
          AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
          AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
          AND ph.[StockCode] LIKE 'RE-%'
-         AND ph.[CheckPointId] IN (216, 217, 218, 219, 260);
+         AND ph.[CheckPointId] IN (216, 217, 218, 219, 260)
+         WITH (nolock);
        """
     print("SELECT process for Rack End-of-Line raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
           "background...\n")
