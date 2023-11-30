@@ -210,134 +210,6 @@ async def select_ph_rawData(async_pool, date_threshold):
         return re_rawData_df, sr_rawData_df
 
 
-async def select_ph_rackBuildData(async_pool, date_threshold):
-    """
-    SELECT function to get all the raw rack build data from product history
-    :param async_pool: The asynchronous pool to access the DB
-    :param date_threshold: the datetime in SQL format used as the lower limit of data extraction
-    :type date_threshold: str
-    :return: A dataframe containing the raw rack build data from product history
-    :rtype: pandas.Dataframe
-    """
-    query = f"""
-           SELECT 'NJ' AS Site
-               ,CASE WHEN ph.[Location] LIKE '%350%'
-                   THEN 'B350'
-                   WHEN ph.[Location] LIKE '%[(40-50)|(4050)]%'
-                   THEN 'B4050'
-                   ELSE 'Unknown'
-                   END AS Building
-             ,ph.[SerialNumber] AS RackSN
-             ,ph.[StockCode]
-             --,ph.[StringField1]
-             ,ph.[CheckPointId]
-             ,ph.[CheckPointName]
-             ,ph.[TransactionDate]
-             ,ph.[Success]
-             ,ph.[Message]
-             ,ph.[TransID]
-             ,agi_SS.[SKU]
-             ,sap_mfgPO.[OrderTypeCode] AS OrderType
-         FROM [ASBuiltDW].[dbo].[producthistory] AS ph
-         INNER JOIN [ASBuiltDW].[dbo].[tbl_ref_agile_SSCode] AS agi_SS
-               ON ph.StockCode = agi_SS.ITEM_NUMBER
-         LEFT JOIN [ASBuiltDW].[dbo].[tbl_Manufacturing_ProductionOrdersSAP_Current] AS sap_mfgPO
-               ON SUBSTRING(ph.[SerialNumber], 1, 8) = sap_mfgPO.[JobOrder]
-         WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
-         AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
-         AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
-         AND ph.[StockCode] LIKE 'RE-%'
-         AND ph.[CheckPointId] IN (200, 235, 236,
-                              254, 255, 208, 209,
-                              252, 253, 201)
-         WITH (nolock);
-       """
-    print("SELECT process for Rack Build raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
-          "background...\n")
-    try:
-        time_tracker = dt.now()
-        async with async_pool.acquire() as db_conn:
-            async with db_conn.cursor() as cursor:
-                await cursor.execute(query)
-                rows = await cursor.fetchall()
-                cols = [column[0] for column in cursor.description]
-                ph_rackBuild_df = pd.DataFrame.from_records(rows, columns=cols)
-    except Exception as e:
-        print(repr(e))
-        LOGGER.error(SQL_Q_ERROR, exc_info=True)
-        show_message(AlertType.FAILED)
-    else:
-        # Ensure correct Serial Numbers by cleaning leading and trailing spaces
-        ph_rackBuild_df['RackSN'] = ph_rackBuild_df['RackSN'].str.strip()
-        # Re-assure TransactionDate is of type datetime
-        ph_rackBuild_df['TransactionDate'] = pd.to_datetime(ph_rackBuild_df['TransactionDate'])
-        print(f"SELECT process for raw rack build data ran successfully\nT: {dt.now() - time_tracker}\n")
-        return ph_rackBuild_df
-
-
-async def select_ph_rackEoL_data(async_pool, date_threshold):
-    """
-    SELECT function to get all the raw rack end-of-line data from product history
-    :param async_pool: The asynchronous pool to access the DB
-    :param date_threshold: the datetime in SQL format used as the lower limit of data extraction
-    :type date_threshold: str
-    :return: A dataframe containing the raw rack end-of-line data from product history
-    :rtype: pandas.Dataframe
-    """
-    query = f"""
-           SELECT 'NJ' AS Site
-               ,CASE WHEN ph.[Location] LIKE '%350%'
-                   THEN 'B350'
-                   WHEN ph.[Location] LIKE '%[(40-50)|(4050)]%'
-                   THEN 'B4050'
-                   ELSE 'Unknown'
-                   END AS Building
-             ,ph.[SerialNumber] AS RackSN
-             ,ph.[StockCode]
-             --,ph.[StringField1]
-             ,ph.[CheckPointId]
-             ,ph.[CheckPointName]
-             ,ph.[TransactionDate]
-             ,ph.[Success]
-             ,ph.[Message]
-             ,ph.[TransID]
-             ,agi_SS.[SKU]
-             ,sap_mfgPO.[OrderTypeCode] AS OrderType
-         FROM [ASBuiltDW].[dbo].[producthistory] AS ph
-         INNER JOIN [ASBuiltDW].[dbo].[tbl_ref_agile_SSCode] AS agi_SS
-               ON ph.StockCode = agi_SS.ITEM_NUMBER
-         LEFT JOIN [ASBuiltDW].[dbo].[tbl_Manufacturing_ProductionOrdersSAP_Current] AS sap_mfgPO
-               ON SUBSTRING(ph.[SerialNumber], 1, 8) = sap_mfgPO.[JobOrder]
-         WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
-         AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
-         AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
-         AND ph.[StockCode] LIKE 'RE-%'
-         AND ph.[CheckPointId] IN (216, 217, 218, 219, 260)
-         WITH (nolock);
-       """
-    print("SELECT process for Rack End-of-Line raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
-          "background...\n")
-    try:
-        time_tracker = dt.now()
-        async with async_pool.acquire() as db_conn:
-            async with db_conn.cursor() as cursor:
-                await cursor.execute(query)
-                rows = await cursor.fetchall()
-                cols = [column[0] for column in cursor.description]
-                ph_rackEoL_df = pd.DataFrame.from_records(rows, columns=cols)
-    except Exception as e:
-        print(repr(e))
-        LOGGER.error(SQL_Q_ERROR, exc_info=True)
-        show_message(AlertType.FAILED)
-    else:
-        # Ensure correct Serial Numbers by cleaning leading and trailing spaces
-        ph_rackEoL_df['RackSN'] = ph_rackEoL_df['RackSN'].str.strip()
-        # Re-assure TransactionDate is of type datetime
-        ph_rackEoL_df['TransactionDate'] = pd.to_datetime(ph_rackEoL_df['TransactionDate'])
-        print(f"SELECT process for raw rack End-of-Line data ran successfully\nT: {dt.now() - time_tracker}\n")
-        return ph_rackEoL_df
-
-
 async def select_sap_historicalStatus(async_pool, date_threshold):
     """
     SELECT function to get the historical status data from SAP
@@ -410,6 +282,133 @@ async def select_sap_historicalStatus(async_pool, date_threshold):
         print(f"SAP Historical Status dataframe is split into two dataframes SR and RE. T: {dt.now() - time_tracker}")
         print("SELECT process for SAP Historical Status data ran successfully\n")
         return sr_sap_statusH_df, re_sap_statusH_df
+
+
+# OBSOLETE:
+async def select_ph_rackBuildData(async_pool, date_threshold):
+    """
+    SELECT function to get all the raw rack build data from product history
+    :param async_pool: The asynchronous pool to access the DB
+    :param date_threshold: the datetime in SQL format used as the lower limit of data extraction
+    :type date_threshold: str
+    :return: A dataframe containing the raw rack build data from product history
+    :rtype: pandas.Dataframe
+    """
+    query = f"""
+           SELECT 'NJ' AS Site
+               ,CASE WHEN ph.[Location] LIKE '%350%'
+                   THEN 'B350'
+                   WHEN ph.[Location] LIKE '%[(40-50)|(4050)]%'
+                   THEN 'B4050'
+                   ELSE 'Unknown'
+                   END AS Building
+             ,ph.[SerialNumber] AS RackSN
+             ,ph.[StockCode]
+             --,ph.[StringField1]
+             ,ph.[CheckPointId]
+             ,ph.[CheckPointName]
+             ,ph.[TransactionDate]
+             ,ph.[Success]
+             ,ph.[Message]
+             ,ph.[TransID]
+             ,agi_SS.[SKU]
+             ,sap_mfgPO.[OrderTypeCode] AS OrderType
+         FROM [ASBuiltDW].[dbo].[producthistory] AS ph
+         INNER JOIN [ASBuiltDW].[dbo].[tbl_ref_agile_SSCode] AS agi_SS
+               ON ph.StockCode = agi_SS.ITEM_NUMBER
+         LEFT JOIN [ASBuiltDW].[dbo].[tbl_Manufacturing_ProductionOrdersSAP_Current] AS sap_mfgPO
+               ON SUBSTRING(ph.[SerialNumber], 1, 8) = sap_mfgPO.[JobOrder]
+         WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
+         AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
+         AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
+         AND ph.[StockCode] LIKE 'RE-%'
+         AND ph.[CheckPointId] IN (200, 235, 236,
+                              254, 255, 208, 209,
+                              252, 253, 201);
+       """
+    print("SELECT process for Rack Build raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
+          "background...\n")
+    try:
+        time_tracker = dt.now()
+        async with async_pool.acquire() as db_conn:
+            async with db_conn.cursor() as cursor:
+                await cursor.execute(query)
+                rows = await cursor.fetchall()
+                cols = [column[0] for column in cursor.description]
+                ph_rackBuild_df = pd.DataFrame.from_records(rows, columns=cols)
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(SQL_Q_ERROR, exc_info=True)
+        show_message(AlertType.FAILED)
+    else:
+        # Ensure correct Serial Numbers by cleaning leading and trailing spaces
+        ph_rackBuild_df['RackSN'] = ph_rackBuild_df['RackSN'].str.strip()
+        # Re-assure TransactionDate is of type datetime
+        ph_rackBuild_df['TransactionDate'] = pd.to_datetime(ph_rackBuild_df['TransactionDate'])
+        print(f"SELECT process for raw rack build data ran successfully\nT: {dt.now() - time_tracker}\n")
+        return ph_rackBuild_df
+
+
+async def select_ph_rackEoL_data(async_pool, date_threshold):
+    """
+    SELECT function to get all the raw rack end-of-line data from product history
+    :param async_pool: The asynchronous pool to access the DB
+    :param date_threshold: the datetime in SQL format used as the lower limit of data extraction
+    :type date_threshold: str
+    :return: A dataframe containing the raw rack end-of-line data from product history
+    :rtype: pandas.Dataframe
+    """
+    query = f"""
+           SELECT 'NJ' AS Site
+               ,CASE WHEN ph.[Location] LIKE '%350%'
+                   THEN 'B350'
+                   WHEN ph.[Location] LIKE '%[(40-50)|(4050)]%'
+                   THEN 'B4050'
+                   ELSE 'Unknown'
+                   END AS Building
+             ,ph.[SerialNumber] AS RackSN
+             ,ph.[StockCode]
+             --,ph.[StringField1]
+             ,ph.[CheckPointId]
+             ,ph.[CheckPointName]
+             ,ph.[TransactionDate]
+             ,ph.[Success]
+             ,ph.[Message]
+             ,ph.[TransID]
+             ,agi_SS.[SKU]
+             ,sap_mfgPO.[OrderTypeCode] AS OrderType
+         FROM [ASBuiltDW].[dbo].[producthistory] AS ph
+         INNER JOIN [ASBuiltDW].[dbo].[tbl_ref_agile_SSCode] AS agi_SS
+               ON ph.StockCode = agi_SS.ITEM_NUMBER
+         LEFT JOIN [ASBuiltDW].[dbo].[tbl_Manufacturing_ProductionOrdersSAP_Current] AS sap_mfgPO
+               ON SUBSTRING(ph.[SerialNumber], 1, 8) = sap_mfgPO.[JobOrder]
+         WHERE ph.[Site] = 'NJ' AND ph.TransactionDate > '{date_threshold}'
+         AND ph.TransactionDate <= CONCAT(CAST(GETDATE() AS DATE), ' 9:00')
+         AND LEN(ph.SerialNumber) = 12 AND ph.[Success] = 1
+         AND ph.[StockCode] LIKE 'RE-%'
+         AND ph.[CheckPointId] IN (216, 217, 218, 219, 260);
+       """
+    print("SELECT process for Rack End-of-Line raw data from [ASBuiltDW].[dbo].[producthistory] running in the "
+          "background...\n")
+    try:
+        time_tracker = dt.now()
+        async with async_pool.acquire() as db_conn:
+            async with db_conn.cursor() as cursor:
+                await cursor.execute(query)
+                rows = await cursor.fetchall()
+                cols = [column[0] for column in cursor.description]
+                ph_rackEoL_df = pd.DataFrame.from_records(rows, columns=cols)
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(SQL_Q_ERROR, exc_info=True)
+        show_message(AlertType.FAILED)
+    else:
+        # Ensure correct Serial Numbers by cleaning leading and trailing spaces
+        ph_rackEoL_df['RackSN'] = ph_rackEoL_df['RackSN'].str.strip()
+        # Re-assure TransactionDate is of type datetime
+        ph_rackEoL_df['TransactionDate'] = pd.to_datetime(ph_rackEoL_df['TransactionDate'])
+        print(f"SELECT process for raw rack End-of-Line data ran successfully\nT: {dt.now() - time_tracker}\n")
+        return ph_rackEoL_df
 
 
 def select_wip_maxStatus(db_conn, isForUpdate=True):

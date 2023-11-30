@@ -26,8 +26,6 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     print("\nSELECT queries running concurrently in the background...\n")
     wip_maxDate = datetime_from_py_to_sql(select_wip_maxDate(conn_sbi))
     results = await asyncio.gather(select_ph_rawData(async_pool_asbuilt, wip_maxDate),
-                                   select_ph_rackBuildData(async_pool_asbuilt, wip_maxDate),
-                                   select_ph_rackEoL_data(async_pool_asbuilt, wip_maxDate),
                                    select_sap_historicalStatus(async_pool_asbuilt, wip_maxDate),
                                    select_customers(async_pool_asbuilt))
     print(f"\nTOTAL extraction time: {dt.now() - extraction_start}")
@@ -35,11 +33,21 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     allocation_start = dt.now()
     print("Data allocation is running in the background...")
 
+    rackBuild_ckps = {200, 235, 236, 254, 255, 208, 209, 252, 253, 201}
+    eol_ckps = {216, 217, 218, 219, 260}
+
     re_rawData_df, sr_rawData_df = results[0]
-    re_rackBuild_df = results[1]
-    re_rackEoL_df = results[2]
-    sr_sap_statusH_df, re_sap_statusH_df = results[3]
-    customers_df = results[4]
+
+    re_rackBuild_df = re_rawData_df[re_rawData_df['CheckPointId'].isin(rackBuild_ckps)]
+    re_rackBuild_df = re_rackBuild_df.drop(columns='StringField1')
+    re_rackBuild_df = re_rackBuild_df.rename(columns={'SerialNumber': 'RackSN'})
+
+    re_rackEoL_df = re_rawData_df[re_rawData_df['CheckPointId'].isin(eol_ckps)]
+    re_rackEoL_df = re_rackEoL_df.drop(columns='StringField1')
+    re_rackEoL_df = re_rackEoL_df.rename(columns={'SerialNumber': 'RackSN'})
+
+    sr_sap_statusH_df, re_sap_statusH_df = results[1]
+    customers_df = results[2]
 
     # Purge Rack Build, End-of-Line and Rack Hi-Pot data that might be in server data to avoid having
     # duplicates further on
@@ -382,6 +390,7 @@ def assign_wip(semaphore, isServerLevel=True):
     load_wip_data(final_wip_df, semaphore, to_csv=False, isServer=isServerLevel)
 
 
+# OBSOLETE:
 def assign_shipmentStatus(db_conn):
     """
     Function gets all units that did not have shipment status and updates the current dwell time. If a new
