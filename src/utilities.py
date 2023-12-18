@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 
 SCRIPT_ON_SERVER = False
-ERRORS_LOG = r"C:\Users\diego.nunez\Documents\CodeSource\Python\WIP_Report\Logging\errors.log"
+ERRORS_LOG = "../Logging/errors.log"
 
 
 def fixed_date(dayDateTime, fixedHour=9):
