@@ -16,6 +16,7 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     Function that uses the SQL extraction functions to extract raw data and distribute the data to be ready for cleaning
     Note: The data is not totally raw. It has passed some processing by merging.
     :param async_pool_asbuilt: Asynchronous pool for Asbuilt DB
+    # :param async_pool_sbi: Asynchronous pool for SBI DB
     :param conn_sbi: The connection for SBI DB
     :return: A tuple containing four dataframes for rack and server raw data
     :rtype: tuple
@@ -34,151 +35,18 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     print("Data allocation is running in the background...")
 
     rackBuild_ckps = {200, 235, 236, 254, 255, 208, 209, 252, 253, 201}
-    eol_ckps = {216, 217, 218, 219, 260}
+    eol_ckps = {216, 217, 218, 219, 260, 2470, 247}
 
     re_rawData_df, sr_rawData_df = results[0]
-
-    re_rackBuild_df = re_rawData_df[re_rawData_df['CheckPointId'].isin(rackBuild_ckps)]
-    re_rackBuild_df = re_rackBuild_df.drop(columns='StringField1')
-    re_rackBuild_df = re_rackBuild_df.rename(columns={'SerialNumber': 'RackSN'})
-
-    re_rackEoL_df = re_rawData_df[re_rawData_df['CheckPointId'].isin(eol_ckps)]
-    re_rackEoL_df = re_rackEoL_df.drop(columns='StringField1')
-    re_rackEoL_df = re_rackEoL_df.rename(columns={'SerialNumber': 'RackSN'})
-
     sr_sap_statusH_df, re_sap_statusH_df = results[1]
     customers_df = results[2]
+    # srSNs_with_flags_df, reSNs_with_flags_df = results[3]  # Currently inactive  # FIXME: Possibly obsolete
 
     # Purge Rack Build, End-of-Line and Rack Hi-Pot data that might be in server data to avoid having
     # duplicates further on
-    mask = ~sr_rawData_df['CheckPointId'].isin({200, 201, 235, 236, 254, 255, 208, 209, 252, 253,
-                                                216, 217, 218, 219, 260, 2470, 247})
+    mask = ~sr_rawData_df['CheckPointId'].isin(rackBuild_ckps.union(eol_ckps))
     sr_rawData_df = sr_rawData_df[mask]
 
-    # Merge rack build information for server:
-    # Server assembly finish data
-    sr_assemblyFinish_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 101]
-    sr_assemblyFinish_df = sr_assemblyFinish_df[['SerialNumber', 'StockCode', 'TransactionDate', 'CheckPointId', 'SKU',
-                                                 'OrderType']]
-    sr_assemblyFinish_df = sr_assemblyFinish_df.rename(columns={'StockCode': 'StockCode_af',
-                                                                'TransactionDate': 'TransactionDate_af',
-                                                                'SKU': 'SKU_af',
-                                                                'OrderType': 'OrderType_af'})
-
-    # SLT check-in data
-    sr_sltIn_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 150]
-    sr_sltIn_df = sr_sltIn_df[['SerialNumber', 'StringField1', 'TransactionDate', 'CheckPointId']]
-    sr_sltIn_df = sr_sltIn_df.rename(columns={'TransactionDate': 'TransactionDate_sltIn'})
-
-    # Merge SLT-in, Server assembly finish, and rack build dataframes.
-    # Then, drop rows whose rack build timestamps do not fall within server assembly finish and SLT-in timestamps
-    sr_rackBuild_df = sr_sltIn_df.merge(re_rackBuild_df, left_on='StringField1', right_on='RackSN', how='inner')
-    sr_rackBuild_df = sr_rackBuild_df.merge(sr_assemblyFinish_df, on='SerialNumber', how='inner')
-    sr_rackBuild_df = sr_rackBuild_df[(sr_rackBuild_df['TransactionDate_af'] <= sr_rackBuild_df['TransactionDate']) &
-                                      (sr_rackBuild_df['TransactionDate'] <= sr_rackBuild_df['TransactionDate_sltIn'])]
-    # Create a new trans ID by adding the SN and 10 billion to the original TransID to make it unique.
-    # Currently, it is not unique because it is using the RE TransID
-    sr_rackBuild_df['int_SN'] = sr_rackBuild_df['SerialNumber'].apply(str_extract_digits)
-    sr_rackBuild_df['TransID'] = sr_rackBuild_df['TransID'].add(10_000_000_000)
-    sr_rackBuild_df['TransID'] = sr_rackBuild_df['TransID'] + sr_rackBuild_df['int_SN']
-    # Move the SR stock code to the StockCode column, which currently has the RE-StockCode,
-    # and RE-checkpoint ID to the checkpoint ID column, as well as SKU, and OrderType for server
-    sr_rackBuild_df['StockCode'] = sr_rackBuild_df['StockCode_af']
-    sr_rackBuild_df['CheckPointId'] = sr_rackBuild_df['CheckPointId_y'].astype(int)
-    sr_rackBuild_df['SKU'] = sr_rackBuild_df['SKU_af']
-    sr_rackBuild_df['OrderType'] = sr_rackBuild_df['OrderType_af']
-
-    # Concatenate server rack build data to main server raw data and drop unnecessary columns
-    sr_rawData_df = pd.concat([sr_rawData_df, sr_rackBuild_df], ignore_index=True)
-    sr_rawData_df = sr_rawData_df.drop(columns=['TransactionDate_sltIn', 'CheckPointId_x', 'RackSN',
-                                                'CheckPointId_y', 'StockCode_af', 'SKU_af', 'OrderType_af',
-                                                'TransactionDate_af', 'int_SN'])
-
-    # Merge Rack End of Line data for server:
-    # Server SLT-pass data
-    sr_sltPass_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 102]
-    sr_sltPass_df = sr_sltPass_df[['SerialNumber', 'StockCode', 'TransactionDate', 'CheckPointId', 'SKU',
-                                   'OrderType']]
-    sr_sltPass_df = sr_sltPass_df.rename(columns={'StockCode': 'StockCode_sltP',
-                                                  'TransactionDate': 'TransactionDate_sltP',
-                                                  'SKU': 'SKU_sltP',
-                                                  'OrderType': 'OrderType_sltP'})
-
-    # Server rack scan 1 data
-    sr_rackScan_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 202]
-    sr_rackScan_df = sr_rackScan_df[['SerialNumber', 'StringField1', 'TransactionDate', 'CheckPointId']]
-    sr_rackScan_df = sr_rackScan_df.rename(columns={'TransactionDate': 'TransactionDate_rs'})
-
-    # Merge SLT-pass, server rack scan, and rack End-of-Line dataframes.
-    # Then, drop rows whose rack End-of-Line timestamps do not fall within server SLT-pass and Rack Scan timestamps
-    sr_rackEoL_df = sr_rackScan_df.merge(re_rackEoL_df, left_on='StringField1', right_on='RackSN', how='inner')
-    sr_rackEoL_df = sr_rackEoL_df.merge(sr_sltPass_df, on='SerialNumber', how='inner')
-    sr_rackEoL_df = sr_rackEoL_df[(sr_rackEoL_df['TransactionDate_sltP'] <= sr_rackEoL_df['TransactionDate']) &
-                                  (sr_rackEoL_df['TransactionDate'] <= sr_rackEoL_df['TransactionDate_rs'])]
-    # Create a new trans ID by adding the SN and 10 billion to the original TransID to make it unique.
-    # Currently, it is not unique because it is using the RE TransID
-    sr_rackEoL_df['int_SN'] = sr_rackEoL_df['SerialNumber'].apply(str_extract_digits)
-    sr_rackEoL_df['TransID'] = sr_rackEoL_df['TransID'].add(10_000_000_000)
-    sr_rackEoL_df['TransID'] = sr_rackEoL_df['TransID'] + sr_rackEoL_df['int_SN']
-    # Move the SR stock code to the StockCode column, which currently has the RE-StockCode,
-    # and RE-checkpoint ID to the checkpoint ID column, as well as SKU, and OrderType for server
-    sr_rackEoL_df['StockCode'] = sr_rackEoL_df['StockCode_sltP']
-    sr_rackEoL_df['CheckPointId'] = sr_rackEoL_df['CheckPointId_y'].astype(int)
-    sr_rackEoL_df['SKU'] = sr_rackEoL_df['SKU_sltP']
-    sr_rackEoL_df['OrderType'] = sr_rackEoL_df['OrderType_sltP']
-
-    # Concatenate server rack End-of-Line data to main server raw data and drop unnecessary columns
-    sr_rawData_df = pd.concat([sr_rawData_df, sr_rackEoL_df], ignore_index=True)
-    sr_rawData_df = sr_rawData_df.drop(columns=['TransactionDate_rs', 'CheckPointId_x', 'RackSN',
-                                                'CheckPointId_y', 'StockCode_sltP', 'SKU_sltP', 'OrderType_sltP',
-                                                'TransactionDate_sltP', 'int_SN'])
-
-    # Merge Rack Hi-Pot data for server. Note: Server data exists in rack hipot checkpoint, but it is not complete
-    # Server Rack Test check-out data
-    sr_rackTestOut_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 224]
-    sr_rackTestOut_df = sr_rackTestOut_df[['SerialNumber', 'StringField1', 'StockCode', 'TransactionDate',
-                                           'CheckPointId', 'SKU', 'OrderType']]
-    sr_rackTestOut_df = sr_rackTestOut_df.rename(columns={'StringField1': 'RackSN',
-                                                          'StockCode': 'StockCode_rt',
-                                                          'TransactionDate': 'TransactionDate_rt',
-                                                          'CheckPointId': 'CheckPointId_rt',
-                                                          'SKU': 'SKU_rt',
-                                                          'OrderType': 'OrderType_rt'})
-
-    # Server final touch check-in data
-    sr_finalTouch_df = sr_rawData_df[sr_rawData_df['CheckPointId'] == 228]
-    sr_finalTouch_df = sr_finalTouch_df[['SerialNumber', 'TransactionDate', 'CheckPointId']]
-    sr_finalTouch_df = sr_finalTouch_df.rename(columns={'TransactionDate': 'TransactionDate_ft',
-                                                        'CheckPointId': 'CheckPointId_ft'})
-
-    # Rack Hi-Pot data
-    re_hipot_df = re_rawData_df[(re_rawData_df['CheckPointId'] == 2470) | (re_rawData_df['CheckPointId'] == 247)]
-    re_hipot_df = re_hipot_df.rename(columns={'SerialNumber': 'RackSN'})
-
-    # Merge Rack Test check-out, final touch, and rack hi-pot dataframes.
-    # Then, drop rows whose rack hi-pot timestamps do not fall within rack test check-out and final touch check-in
-    sr_rackHipot_df = sr_rackTestOut_df.merge(re_hipot_df, on='RackSN', how='inner')
-    sr_rackHipot_df = sr_rackHipot_df.merge(sr_finalTouch_df, on='SerialNumber', how='inner')
-    sr_rackHipot_df = sr_rackHipot_df[(sr_rackHipot_df['TransactionDate_rt'] <= sr_rackHipot_df['TransactionDate']) &
-                                      (sr_rackHipot_df['TransactionDate'] <= sr_rackHipot_df['TransactionDate_ft'])]
-    # Create a new trans ID by adding the SN and 10 billion to the original TransID to make it unique.
-    # Currently, it is not unique because it is using the RE TransID
-    sr_rackHipot_df['int_SN'] = sr_rackHipot_df['SerialNumber'].apply(str_extract_digits)
-    sr_rackHipot_df['TransID'] = sr_rackHipot_df['TransID'].add(10_000_000_000)
-    sr_rackHipot_df['TransID'] = sr_rackHipot_df['TransID'] + sr_rackHipot_df['int_SN']
-    # Move the SR stock code to the StockCode column, which currently has the RE-StockCode,
-    # and RE-checkpoint ID to the checkpoint ID column, as well as RackSN, SKU, and OrderType for server
-    sr_rackHipot_df['StockCode'] = sr_rackHipot_df['StockCode_rt']
-    sr_rackHipot_df['CheckPointId'] = sr_rackHipot_df['CheckPointId'].astype(int)
-    sr_rackHipot_df['StringField1'] = sr_rackHipot_df['RackSN']
-    sr_rackHipot_df['SKU'] = sr_rackHipot_df['SKU_rt']
-    sr_rackHipot_df['OrderType'] = sr_rackHipot_df['OrderType_rt']
-
-    # Concatenate rack hi-pot for server data to main server raw data and drop unnecessary columns
-    sr_rawData_df = pd.concat([sr_rawData_df, sr_rackHipot_df], ignore_index=True)
-    sr_rawData_df = sr_rawData_df.drop(columns=['TransactionDate_ft', 'CheckPointId_ft', 'CheckPointId_rt',
-                                                'RackSN', 'StockCode_rt', 'SKU_rt', 'OrderType_rt',
-                                                'TransactionDate_rt', 'int_SN'])
     # Label the unit type: Server or rack
     sr_rawData_df['ProductType'] = "Server"
     re_rawData_df['ProductType'] = "Rack"
@@ -193,7 +61,7 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
 
     print(f"\nTOTAL raw data allocation time: {dt.now() - allocation_start}")
 
-    return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
+    return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df  # , srSNs_with_flags_df, reSNs_with_flags_df - FIXME
 
 
 def assign_wip(semaphore, isServerLevel=True):
@@ -204,9 +72,6 @@ def assign_wip(semaphore, isServerLevel=True):
     :type semaphore: multiprocessing.Semaphore
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
     """
-    # Logger variables
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
 
     # Process number
     if multiprocessing.current_process().name == "SR_Pro_1":
@@ -223,8 +88,8 @@ def assign_wip(semaphore, isServerLevel=True):
     # Import raw data
     import_start = dt.now()
     print(f"({pro_num}) Importing raw data\n")
-    rawData_df = pd.read_hdf(f"CleanedRecords_csv/wip_rawData_p{pro_num}.h5", key='data')
-    sap_historicalStatus_df = pd.read_hdf(f"CleanedRecords_csv/sap_historyData_p{pro_num}.h5", key='data')
+    rawData_df = pd.read_hdf(f"../CleanedRecords_csv/wip_rawData_p{pro_num}.h5", key='data')
+    sap_historicalStatus_df = pd.read_hdf(f"../CleanedRecords_csv/sap_historyData_p{pro_num}.h5", key='data')
     print(f"({pro_num}) Raw data import is complete. T: {dt.now() - import_start}")
 
     PARTITION_SIZE = 300_000
@@ -237,10 +102,11 @@ def assign_wip(semaphore, isServerLevel=True):
              'Rack Build': [200, 235, 254, 208, 252],
              'System Test': [150, 170],
              'End of Line': [216, 218, 260, 202, 243, 2470, 228, 270, 237, 230, 300, 301, 1510, 234, 302]}
-    wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'SKU', 'CheckPointId',
-                   'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'SnapshotTime',
+    wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'StockCodePrefix', 'SKU', 'CheckPointId',  # TODO: Add the new columns
+                   'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'WIP_SnapshotTime', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
                    'ProductType', 'Customer', 'PackedIsLast_flag', 'PackedPreviously_flag',
+                   'VoidSN_Previously_flag', 'ReworkScanPreviously_flag',
                    'ETL_time']  # 'isFrom_WIP' - Disabled indefinitely
     distinctSN_count = rawData_df['SerialNumber'].nunique()
 
@@ -329,7 +195,7 @@ def assign_wip(semaphore, isServerLevel=True):
 
     # Convert WIP list to a dataframe
     allocation_start = dt.now()
-    if 0 < len(wip_list) <= PARTITION_SIZE:  # Still append for wip_list less than 300 thousand
+    if 0 < len(wip_list) <= PARTITION_SIZE:  # Still append for wip_list less than 300K
         master_list.append(wip_list.copy())
         wip_list.clear()
     wip_dfs_list = []
@@ -340,8 +206,8 @@ def assign_wip(semaphore, isServerLevel=True):
         time_tracker = dt.now()
         wip_df = pd.DataFrame(wip_list, columns=wip_columns)
 
-        logger.info(f"({index + 1}) Initialized the ({pro_num}){'SR' if isServerLevel else 'RE'} "
-                    f"WIP dataframe from the tuples. T: {dt.now() - time_tracker}")
+        print(f"({index + 1}) Initialized the ({pro_num}){'SR' if isServerLevel else 'RE'} "
+              f"WIP dataframe from the tuples. T: {dt.now() - time_tracker}")
 
         # Datetime to string conversion
         if wip_df.shape[0] > 0:
@@ -349,17 +215,17 @@ def assign_wip(semaphore, isServerLevel=True):
             print(f"{wip_df.shape[0]:,} items in ({pro_num}){'SR' if isServerLevel else 'RE'} "
                   f"WIP dataframe ({index + 1})")
             time_tracker = dt.now()
-            wip_df['DwellTime_calendar'] = wip_df['SnapshotTime'] - wip_df['TransactionDate']
+            wip_df['DwellTime_calendar'] = wip_df['WIP_SnapshotTime'] - wip_df['TransactionDate']
             wip_df['DwellTime_calendar'] = wip_df['DwellTime_calendar'].dt.total_seconds()
             wip_df['DwellTime_calendar'] /= 3600
-            logger.info(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
-                        f"WIP: Calendar dwell time calculations complete. T: {dt.now() - time_tracker}")
+            print(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
+                  f"WIP: Calendar dwell time calculations complete. T: {dt.now() - time_tracker}")
             time_tracker = dt.now()
             wip_df['DwellTime_working'] = wip_df.apply(lambda row: delta_working_hours(row['TransactionDate'],
-                                                                                       row['SnapshotTime'],
+                                                                                       row['WIP_SnapshotTime'],
                                                                                        calendar=False), axis=1)
-            logger.info(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
-                        f"WIP: Working time dwell time calculations complete. T: {dt.now() - time_tracker}")
+            print(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
+                  f"WIP: Working time dwell time calculations complete. T: {dt.now() - time_tracker}")
 
             # Assign the process areas
             wip_df['Area'] = wip_df['Area'].astype(object)  # Explicitly cast column before assignment (pandas r.)
@@ -370,11 +236,11 @@ def assign_wip(semaphore, isServerLevel=True):
 
             # Convert python Datetime(s) to SQL Datetime
             time_tracker = dt.now()
-            wip_df[['TransactionDate', 'SnapshotTime']] = wip_df[['TransactionDate', 'SnapshotTime']].applymap(
+            wip_df[['TransactionDate', 'WIP_SnapshotTime']] = wip_df[['TransactionDate', 'WIP_SnapshotTime']].applymap(
                 datetime_from_py_to_sql)
             wip_df['ETL_time'] = datetime_from_py_to_sql(dt.now())
-            logger.info(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
-                        f"WIP: Datetime conversions to string complete. T: {dt.now() - time_tracker}")
+            print(f"({index + 1}) ({pro_num}){'SR' if isServerLevel else 'RE'} "
+                  f"WIP: Datetime conversions to string complete. T: {dt.now() - time_tracker}")
 
             wip_dfs_list.append(wip_df.copy())
 
@@ -397,7 +263,7 @@ def assign_shipmentStatus(db_conn):
     shipment status exists since the latest INSERT run, then the NotShipped flag is updated accordingly
     :param db_conn: The connection to the database
     :return: a dataframe with the latest shipment information updated
-    :rtype: pandas.Dataframe
+    :rtype: pandas.DataFrame
     """
     criticalShipment_ckps = {300, 301, 302}
     today_upperBoundary = fixed_date(select_wip_maxDate(db_conn, snapshotTime=True))

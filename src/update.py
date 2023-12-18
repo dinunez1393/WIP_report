@@ -2,15 +2,11 @@
 from tqdm import tqdm
 from alerts import *
 import pandas as pd
-from utilities import show_message, datetime_from_py_to_sql, items_to_SQL_values
-import logging
+from utilities import *
 from datetime import datetime as dt
 
-SUCCESS_OP = "The UPDATE operation completed successfully"
-SQL_U_ERROR = "There was an error in the UPDATE query"
-SUCCESS_MSG = "Number of raw objects cleaned: {0}. Number of new records updated: {1}"
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.ERROR)
+
+LOGGER = logger_creator('UPDATE_Error')
 
 
 def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
@@ -51,7 +47,7 @@ def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
             UPDATE o
             SET o.[PackedIsLast_flag] = 1,
                 o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS o
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
             JOIN SerialNumber_CTE AS u
             ON o.[SerialNumber] = u.[Value]
         """
@@ -68,7 +64,7 @@ def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
             UPDATE o
             SET o.[PackedIsLast_flag] = 0,
                 o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history] AS o
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
             JOIN SerialNumber_CTE AS u
             ON o.[SerialNumber] = u.[Value]
         """
@@ -92,11 +88,11 @@ def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
                         print("No new records to UPDATE for not shipped units\n")
             except Exception as e:
                 print(repr(e))
-                LOGGER.error(SQL_U_ERROR, exc_info=True)
+                LOGGER.error(Messages.SQL_U_ERROR.value, exc_info=True)
                 show_message(AlertType.FAILED)
             else:
                 db_conn.commit()
-                print("\nUPDATE operation ran successfully\n")
+                print(f"\n{Messages.SUCCESS_UPDATE_OP.value}\n")
         else:
             print("\nNo new records to UPDATE\n")
 
@@ -110,7 +106,7 @@ def update_orderType_factoryStatus(db_conn, saved_as_csv=False):
     :return: None
     """
     update_query = """
-                UPDATE [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
+                UPDATE [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
                 SET [OrderType] =
                     CASE
                         WHEN [OrderType] = 'NULL'
@@ -140,7 +136,7 @@ def update_orderType_factoryStatus(db_conn, saved_as_csv=False):
                 cursor.execute(update_query)
         except Exception as e:
             print(repr(e))
-            LOGGER.error(SQL_U_ERROR, exc_info=True)
+            LOGGER.error(Messages.SQL_U_ERROR.value, exc_info=True)
             show_message(AlertType.FAILED)
         else:
             db_conn.commit()

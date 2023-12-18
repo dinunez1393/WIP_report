@@ -4,7 +4,12 @@ import tkinter as tk
 from tkinter import messagebox
 from alerts import *
 import time as ti
+import logging
 from tqdm import tqdm
+
+
+SCRIPT_ON_SERVER = False
+ERRORS_LOG = r"C:\Users\diego.nunez\Documents\CodeSource\Python\WIP_Report\Logging\errors.log"
 
 
 def fixed_date(dayDateTime, fixedHour=9):
@@ -31,7 +36,37 @@ def datetime_from_py_to_sql(py_datetime):
     return py_datetime.__str__()[:23]
 
 
-def show_message(alert_type, script_onServer=False):
+def logger_creator(logger_name, logger_type='ERROR', logFile_location=ERRORS_LOG, script_onServer=SCRIPT_ON_SERVER):
+    """
+    Function creates a logger object
+    :param logger_name: the name assigned to the logger instance
+    :type logger_name: str
+    :param logger_type: the logging type (i.e. DEBUG, INFO, ERROR)
+    :param logFile_location: the path location where the log file is stored
+    :param script_onServer: Flag that indicates if this script is running on the server. If it is, then it should not
+    save reports to log file
+    :return: the logger object
+    :rtype: logging.Logger
+    """
+    # Create logger
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logger_type)
+
+    # Configure handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger_console_handler = logging.StreamHandler()
+    logger_console_handler.setFormatter(formatter)
+    logger.addHandler(logger_console_handler)
+
+    if not script_onServer:
+        logger_file_handler = logging.FileHandler(logFile_location)
+        logger_file_handler.setFormatter(formatter)
+        logger.addHandler(logger_file_handler)
+
+    return logger
+
+
+def show_message(alert_type, script_onServer=SCRIPT_ON_SERVER):
     """
     Function that shows an Error message box when a query does not execute properly
     Or an informational message box if the operation completed successfully
@@ -155,8 +190,8 @@ def items_to_SQL_values(collection, isForUpdate=True, chunk_size=1_000):
         for item in tqdm(sql_values, total=len(sql_values), desc="Creating SQL Values list"):
             sql_values_str += item
     else:  # Placeholder values for INSERT query
-        sql_values_str = "('{}', '{}', '{}', '{}', '{}', {}, '{}', '{}', {}, '{}', '{}', {}, {}, " \
-                          "'{}', '{}', '{}', '{}', {}, {}, '{}'),"
+        sql_values_str = "('{}', '{}', '{}', '{}', '{}', '{}', {}, '{}', '{}', {}, '{}', '{}', '{}', {}, {}, " \
+                          "'{}', '{}', '{}', '{}', {}, {}, {}, {}, '{}'),"
         sql_values_str *= chunk_size
     return sql_values_str.format(*collection)[:-1]  # Omit the last comma
 
@@ -165,7 +200,7 @@ def df_splitter(dataframe, category_name='SerialNumber'):
     """
     Function splits a dataframe by category into four partitions (15%-35%-20%-30%)
     :param dataframe: The dataframe to be split into four
-    :type dataframe: pandas.Dataframe
+    :type dataframe: pandas.DataFrame
     :param category_name: The column name of the category to use for the splitting
     :return: a tuple containing three dataframes, and three lists. The list contains the unique categories
     of each new DF
@@ -184,3 +219,30 @@ def df_splitter(dataframe, category_name='SerialNumber'):
     new_df_4 = dataframe[dataframe[category_name].isin(division_4)]
 
     return new_df_1, new_df_2, new_df_3, new_df_4, division_1, division_2, division_3, division_4
+
+
+def unravel_df_to_chunks(dataframe, chunk_size):
+    """
+    Function unravels all the contents of a dataframe into a list of lists depending on the chunk size.
+    :param dataframe: Dataframe containing values
+    :type dataframe: pandas.DataFrame
+    :param chunk_size: The size of each partition that the dataframe will be broken into
+    :type chunk_size: int
+    :return: A list of lists where the inner lists contain the unraveled values of the dataframe
+    :rtype: list
+    """
+    if dataframe.shape[0] >= chunk_size:  # Partition the main dataframe into chunks of size 'chunk_size'
+        num_chunks = dataframe.shape[0] // chunk_size
+        chunked_dfs = [dataframe.iloc[i * chunk_size: (i + 1) * chunk_size, :].copy() for i in range(num_chunks)]
+        remaining_df = dataframe.iloc[(num_chunks * chunk_size):, :].copy()
+
+        if remaining_df.shape[0] > 0:  # Append remaining dataframe (smaller than chunk_size) if any
+            chunked_dfs.append(remaining_df)
+
+        # Unravel the partitions
+        return [partition_df.values.ravel().tolist() for partition_df in chunked_dfs]
+
+    elif 0 < dataframe.shape[0] < chunk_size:  # Small size (< chunk_size) dataframe
+        return [dataframe.values.ravel().tolist()]
+
+    return None

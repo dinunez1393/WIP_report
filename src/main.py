@@ -10,7 +10,6 @@ import warnings
 import pandas as pd
 from utilities import *
 import asyncio
-import logging
 import multiprocessing
 import sys
 
@@ -20,16 +19,10 @@ DATABASE_NAME_sbi = 'SBILearning'
 SERVER_NAME_asbuilt = 'ZwhirlpoolR'
 DATABASE_NAME_asbuilt = 'ASBuiltDW'
 
-GENERIC_ERROR = "An error occurred and the operation did not complete. Please check log."
-RUN_T_ERROR = "A runtime error occurred"
-ASYNC_ERROR = "An asynchronous runtime error occurred"
-PROGRAM_END = "End of program execution"
-SUCCESS_OP = "The operation completed successfully"
-
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.ERROR)
+LOGGER = logger_creator('RunTime_Error')
 
 
+# TODO: Adapt to new logic
 async def initializer(connection_sbi):
     """
     Function that initializes the raw data
@@ -46,7 +39,7 @@ async def initializer(connection_sbi):
         all_rawData = await get_raw_data(async_pool_asbuilt, connection_sbi)
     except Exception as err:
         print(repr(err))
-        LOGGER.error(GENERIC_ERROR, exc_info=True)
+        LOGGER.error(Messages.GENERIC_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
     else:
         print("ASYNC DB Connections ran successfully\n")
@@ -94,16 +87,16 @@ if __name__ == '__main__':
             # Export raw data to HDF5
             export_start = dt.now()
             print("Exporting raw data to HDF5\n")
-            sr_rawData_df_1.to_hdf("CleanedRecords_csv/wip_rawData_p1.h5", index=False, key='data', mode='w')
-            sr_rawData_df_2.to_hdf("CleanedRecords_csv/wip_rawData_p2.h5", index=False, key='data', mode='w')
-            sr_rawData_df_3.to_hdf("CleanedRecords_csv/wip_rawData_p3.h5", index=False, key='data', mode='w')
-            sr_rawData_df_4.to_hdf("CleanedRecords_csv/wip_rawData_p4.h5", index=False, key='data', mode='w')
-            re_rawData_df.to_hdf("CleanedRecords_csv/wip_rawData_p5.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_1.to_hdf("CleanedRecords_csv/sap_historyData_p1.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_2.to_hdf("CleanedRecords_csv/sap_historyData_p2.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_3.to_hdf("CleanedRecords_csv/sap_historyData_p3.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_4.to_hdf("CleanedRecords_csv/sap_historyData_p4.h5", index=False, key='data', mode='w')
-            re_sap_statusH_df.to_hdf("CleanedRecords_csv/sap_historyData_p5.h5", index=False, key='data', mode='w')
+            sr_rawData_df_1.to_hdf("../CleanedRecords_csv/wip_rawData_p1.h5", index=False, key='data', mode='w')
+            sr_rawData_df_2.to_hdf("../CleanedRecords_csv/wip_rawData_p2.h5", index=False, key='data', mode='w')
+            sr_rawData_df_3.to_hdf("../CleanedRecords_csv/wip_rawData_p3.h5", index=False, key='data', mode='w')
+            sr_rawData_df_4.to_hdf("../CleanedRecords_csv/wip_rawData_p4.h5", index=False, key='data', mode='w')
+            re_rawData_df.to_hdf("../CleanedRecords_csv/wip_rawData_p5.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_1.to_hdf("../CleanedRecords_csv/sap_historyData_p1.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_2.to_hdf("../CleanedRecords_csv/sap_historyData_p2.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_3.to_hdf("../CleanedRecords_csv/sap_historyData_p3.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_4.to_hdf("../CleanedRecords_csv/sap_historyData_p4.h5", index=False, key='data', mode='w')
+            re_sap_statusH_df.to_hdf("../CleanedRecords_csv/sap_historyData_p5.h5", index=False, key='data', mode='w')
             print(f"Export complete. T: {dt.now() - export_start}")
 
         else:  # Perform transformation and loading
@@ -132,7 +125,7 @@ if __name__ == '__main__':
             update_orderType_factoryStatus(conn_sbi, saved_as_csv=False)
     except Exception as e:
         print(repr(e))
-        LOGGER.error(GENERIC_ERROR, exc_info=True)
+        LOGGER.error(Messages.GENERIC_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
     else:
         print("DB Connection ran successfully\n")

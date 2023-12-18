@@ -1,26 +1,20 @@
 # DELETE SQL queries
 from alerts import *
-import logging
-from utilities import show_message
+from utilities import show_message, logger_creator
 from datetime import datetime as dt, timedelta
 
 
-SUCCESS_OP = "The INSERT operation completed successfully"
-SQL_D_ERROR = "There was an error in the DELETE query"
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.ERROR)
+LOGGER = logger_creator('DELETE_Error')
 
 
 def delete_oldData(db_conn):
     """
     Delete function for clearing old WIP data
     :param db_conn: The connection to the database
-    :return: Nothing
-    :rtype: None
     """
     query = """
-        DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_WIP_history]
-        WHERE [WIP_SnapshotDate] < DATEADD(DAY, -200, GETDATE());
+        DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+        WHERE [WIP_SnapshotDate] < DATEADD(DAY, -400, GETDATE());
     """
 
     try:
@@ -30,7 +24,7 @@ def delete_oldData(db_conn):
             cursor.execute(query)
     except Exception as e:
         print(repr(e))
-        LOGGER.error(SQL_D_ERROR, exc_info=True)
+        LOGGER.error(Messages.SQL_D_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
     else:
         db_conn.commit()
@@ -42,9 +36,8 @@ def delete_allData(db_conn):
     """
     Delete function truncates the WIP table
     :param db_conn: The connection to the database
-    :return: None
     """
-    query = "TRUNCATE TABLE [SBILearning].[dbo].[DNun_tbl_Production_WIP_history];"
+    query = "TRUNCATE TABLE [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual];"
 
     try:
         delete_start = dt.now()
@@ -53,7 +46,7 @@ def delete_allData(db_conn):
             cursor.execute(query)
     except Exception as e:
         print(repr(e))
-        LOGGER.error(SQL_D_ERROR, exc_info=True)
+        LOGGER.error(Messages.SQL_D_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
     else:
         db_conn.commit()
