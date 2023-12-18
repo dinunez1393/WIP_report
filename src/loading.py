@@ -52,7 +52,7 @@ def load_wip_data(wip_df, semaphore, to_csv=False, isServer=True):
 
         wip_df[['DwellTime_calendar', 'DwellTime_working']] = wip_df[
             ['DwellTime_calendar', 'DwellTime_working']].applymap(lambda x: format(x, '.7f'))
-        wip_df[['PackedIsLast_flag', 'PackedPreviously_flag', 'VoidSN_Previously_flag', 'ReworkScanPreviously_flag']] = \
+        wip_df[['PackedIsLast_flag', 'PackedPreviously_flag', 'VoidSN_Previously_flag', 'ReworkScanPreviously_flag']] =\
             wip_df[['PackedIsLast_flag', 'PackedPreviously_flag',
                     'VoidSN_Previously_flag', 'ReworkScanPreviously_flag']].astype(int)
         wip_df = wip_df.fillna('NULL')
