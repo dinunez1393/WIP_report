@@ -7,6 +7,7 @@ import pandas as pd
 import time as ti
 from utilities import *
 from db_conn import make_connection
+import sys
 
 CHUNK_SIZE = 1_000
 LOGGER = logger_creator('INSERT_Error')
@@ -56,6 +57,8 @@ def load_wip_data(wip_df, semaphore, to_csv=False, isServer=True):
             wip_df[['PackedIsLast_flag', 'PackedPreviously_flag',
                     'VoidSN_Previously_flag', 'ReworkScanPreviously_flag']].astype(int)
         wip_df = wip_df.fillna('NULL')
+        # Epoch time is the dummy NULL for a datetime column
+        wip_df.loc[(wip_df['Updated_time'] == 'NULL'), 'Updated_time'] = '1970-01-01 00:00'
 
         # Convert dataframe to chunked lists of values
         unravel_dfs = unravel_df_to_chunks(wip_df, CHUNK_SIZE)
@@ -87,7 +90,8 @@ def load_wip_data(wip_df, semaphore, to_csv=False, isServer=True):
                     [PackedPreviously_flag] [bit] NOT NULL,
                     [VoidSN_Previously_flag] [bit] NOT NULL,
                     [ReworkScanPreviously_flag] [bit] NOT NULL,
-                    [ExtractionDate] [datetime] NOT NULL);
+                    [ExtractionDate] [datetime] NOT NULL,
+                    [LatestUpdateDate] [datetime] NULL);
             """
             insert_query_temp = """
                     INSERT INTO [SBILearning].[dbo].temp_tbl_Production_WIP_history_{0}
@@ -96,32 +100,7 @@ def load_wip_data(wip_df, semaphore, to_csv=False, isServer=True):
             """
             drop_query_temp = f"DROP TABLE [SBILearning].[dbo].temp_tbl_Production_WIP_history_{pro_num};"
             insert_query_main = f"""
-                    INSERT INTO [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] (
-                        [Site]
-                      ,[Building]
-                      ,[SerialNumber]
-                      ,[StockCode]
-                      ,[StockCodePrefix]
-                      ,[SKU]
-                      ,[CheckpointID]
-                      ,[CheckpointName]
-                      ,[ProcessArea]
-                      ,[TransactionID]
-                      ,[TransactionDate]
-                      ,[WIP_SnapshotDate]
-                      ,[SnapshotTime]
-                      ,[DwellTime_calendar]
-                      ,[DwellTime_working]
-                      ,[OrderType]
-                      ,[FactoryStatus]
-                      ,[ProductType]
-                      ,[Customer]
-                      ,[PackedIsLast_flag]
-                      ,[PackedPreviously_flag]
-                      ,[VoidSN_Previously_flag]
-                      ,[ReworkScanPreviously_flag]
-                      ,[ExtractionDate]
-                    )
+                    INSERT INTO [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
                     SELECT * FROM [SBILearning].[dbo].temp_tbl_Production_WIP_history_{pro_num};
             """
             # INSERT new records into DB
@@ -227,6 +206,7 @@ def load_wip_data(wip_df, semaphore, to_csv=False, isServer=True):
                 print(repr(e))
                 LOGGER.error(Messages.SQL_I_ERROR.value, exc_info=True)
                 show_message(AlertType.FAILED)
+                sys.exit()
             else:
                 db_conn.commit()
                 print(f"\n({pro_num}) {'SR' if isServer else 'RE'} {Messages.SUCCESS_LOAD_OP.value}.\n"

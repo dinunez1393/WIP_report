@@ -1,109 +1,80 @@
 # UPDATE SQL queries or Dataframe to CSV
-from tqdm import tqdm
 from alerts import *
-import pandas as pd
 from utilities import *
 from datetime import datetime as dt
+import sys
 
 
 LOGGER = logger_creator('UPDATE_Error')
 
 
-def update_shipmentFlag(db_conn, wip_updated, to_csv=False):
+def update_shipmentFlag(db_conn, wip_unpacked):
     """
     Function to update the shipment status flag of the WIP records
     :param db_conn: the connection to the database
-    :param wip_updated: a list containing two dataframes. The first one is for shipped records, the second one is for
-    not shipped
-    :type wip_updated: list
-    :param to_csv: a flag indicating if the records should be saved to CSV file
-    :return: None
+    :param wip_unpacked: a set containing the SNs that were unpacked and restored into the process flow
+    :type wip_unpacked: set
     """
-    if to_csv:  # Save a CSV file of the updated WIP data
-        print("Creating updated WIP .csv files in the background...")
-        wip_updated[0].to_csv("../CleanedRecords_csv/wip_updatedShipped.csv", index=False)
+    update_shipped_query = f"""
+        WITH shipped_CTE AS (
+            SELECT DISTINCT [SerialNumber]
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+            WHERE [PackedIsLast_flag] = 1
+        )
+    
+        UPDATE o
+        SET o.[PackedIsLast_flag] = 1,
+            o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
+        FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
+        JOIN shipped_CTE AS u
+        ON o.[SerialNumber] = u.[SerialNumber]
+    """
 
-        wip_updated[1].to_csv("../CleanedRecords_csv/wip_updatedNotShipped.csv", index=False)
-        print("CSV files for updated WIP created successfully\n")
-    else:
-        if wip_updated[0].shape[0] > 0:
-            wip_shipped_set = set(wip_updated[0]['SerialNumber'])
-        else:
-            wip_shipped_set = []
-        if wip_updated[1].shape[0] > 0:
-            wip_notShipped_set = set(wip_updated[1]['SerialNumber'])
-        else:
-            wip_notShipped_set = []
+    update_unpacked_query = f"""
+        WITH SerialNumber_CTE AS (
+            SELECT SerialNumber
+            FROM (
+                VALUES
+                    {items_to_SQL_values(collection=wip_unpacked)}
+            ) AS Items(SerialNumber)
+        )
+    
+        UPDATE o
+        SET o.[PackedIsLast_flag] = 0,
+            o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
+        FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
+        JOIN SerialNumber_CTE AS u
+        ON o.[SerialNumber] = u.[SerialNumber]
+    """
+    try:
+        with db_conn.cursor() as cursor:
+            update_start = dt.now()
+            print("UPDATING WIP shipment flag for shipped units in the background...")
+            cursor.execute(update_shipped_query)
+            print(f"UPDATE for WIP shipped records is complete. T: {dt.now() - update_start}")
 
-        update_shipped_query = f"""
-            WITH SerialNumber_CTE AS (
-                SELECT Value
-                FROM (
-                    VALUES
-                        {items_to_SQL_values(collection=wip_shipped_set)}
-                ) AS Items(Value)
-            )
-        
-            UPDATE o
-            SET o.[PackedIsLast_flag] = 1,
-                o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
-            JOIN SerialNumber_CTE AS u
-            ON o.[SerialNumber] = u.[Value]
-        """
-
-        update_notShipped_query = f"""
-            WITH SerialNumber_CTE AS (
-                SELECT Value
-                FROM (
-                    VALUES
-                        {items_to_SQL_values(collection=wip_notShipped_set)}
-                ) AS Items(Value)
-            )
-        
-            UPDATE o
-            SET o.[PackedIsLast_flag] = 0,
-                o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
-            JOIN SerialNumber_CTE AS u
-            ON o.[SerialNumber] = u.[Value]
-        """
-        if len(wip_shipped_set) > 0 or len(wip_notShipped_set) > 0:
-            try:
-                with db_conn.cursor() as cursor:
-                    if len(wip_shipped_set) > 0:
-                        update_start = dt.now()
-                        print("UPDATING WIP records for shipped units in the background...")
-                        cursor.execute(update_shipped_query)
-                        print(f"UPDATE for WIP shipped records is complete. T: {dt.now() - update_start}")
-                    else:
-                        print("No new records to UPDATE for shipped units\n")
-
-                    if len(wip_notShipped_set) > 0:
-                        update_start = dt.now()
-                        print("UPDATING WIP shipment flag for not shipped units in the background...")
-                        cursor.execute(update_notShipped_query)
-                        print(f"UPDATE for WIP unshipped records is complete. T: {dt.now() - update_start}")
-                    else:
-                        print("No new records to UPDATE for not shipped units\n")
-            except Exception as e:
-                print(repr(e))
-                LOGGER.error(Messages.SQL_U_ERROR.value, exc_info=True)
-                show_message(AlertType.FAILED)
+            if len(wip_unpacked) > 0:
+                update_start = dt.now()
+                print("UPDATING WIP shipment flag for unpacked units in the background...")
+                cursor.execute(update_unpacked_query)
+                print(f"UPDATE for WIP unpacked records is complete. T: {dt.now() - update_start}")
             else:
-                db_conn.commit()
-                print(f"\n{Messages.SUCCESS_UPDATE_OP.value}\n")
-        else:
-            print("\nNo new records to UPDATE\n")
+                print("No new records to UPDATE for unpacked and restored units\n")
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(Messages.SQL_U_ERROR.value, exc_info=True)
+        show_message(AlertType.FAILED)
+        sys.exit()
+    else:
+        db_conn.commit()
+        print(f"\n{Messages.SUCCESS_UPDATE_OP.value}\n")
 
 
-def update_orderType_factoryStatus(db_conn, saved_as_csv=False):
+def update_str_nulls(db_conn):
     """
     Function to update the columns [OrderType], [FactoryStatus] based if they have the string value 'NULL',
     then set them to actual NULL
     :param db_conn: the connection to the database
-    :param saved_as_csv: Flag to indicate if the load operation was previously saved as CSV or directly to SQL
-    :return: None
     """
     update_query = """
                 UPDATE [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
@@ -124,20 +95,24 @@ def update_orderType_factoryStatus(db_conn, saved_as_csv=False):
                         WHEN [Customer] = 'NULL'
                         THEN NULL
                         ELSE [Customer]
-                    END;    
+                    END
+                ,[LatestUpdateDate] =
+                   CASE
+                        WHEN [LatestUpdateDate] = '1970-01-01 00:00'
+                        THEN NULL
+                        ELSE [LatestUpdateDate]
+                    END;
     """
-    if saved_as_csv:
-        pass
+    try:
+        update_start = dt.now()
+        with db_conn.cursor() as cursor:
+            print("Updating Order Type and Factory status NULL values in the background...")
+            cursor.execute(update_query)
+    except Exception as e:
+        print(repr(e))
+        LOGGER.error(Messages.SQL_U_ERROR.value, exc_info=True)
+        show_message(AlertType.FAILED)
+        sys.exit()
     else:
-        try:
-            update_start = dt.now()
-            with db_conn.cursor() as cursor:
-                print("Updating Order Type and Factory status NULL values in the background...")
-                cursor.execute(update_query)
-        except Exception as e:
-            print(repr(e))
-            LOGGER.error(Messages.SQL_U_ERROR.value, exc_info=True)
-            show_message(AlertType.FAILED)
-        else:
-            db_conn.commit()
-            print(f"\nUPDATE operation ran successfully\nT: {dt.now() - update_start}\n")
+        db_conn.commit()
+        print(f"\nUPDATE operation ran successfully\nT: {dt.now() - update_start}\n")

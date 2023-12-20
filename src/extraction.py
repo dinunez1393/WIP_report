@@ -3,7 +3,7 @@ from utilities import *
 from alerts import *
 import pandas as pd
 from datetime import datetime as dt, timedelta, date
-
+import sys
 
 # To build table from scratch
 if dt.now().date() == date(2023, 12, 15):
@@ -31,6 +31,7 @@ def select_wipTable_count(db_conn):
         print(repr(e))
         LOGGER.error(Messages.SQL_Q_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         return table_count
 
@@ -57,84 +58,13 @@ def select_wip_maxDate(db_conn, snapshotTime=False):
         print(repr(e))
         LOGGER.error(Messages.SQL_Q_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         if max_date is None:  # Table is empty
             max_date = DATE_THRESHOLD
         print(f"SELECT process for MAX date from WIP ran successfully. The latest MAX date is: {max_date}\n"
               f"T: {dt.now() - time_tracker}\n")
         return max_date
-
-
-async def select_wip_flags(async_pool):  # FIXME: Probable obsolete function
-    """
-    Function selects distinct SNs from the WIP table that have any of these flags: PackedPreviously_flag,
-    VoidSN_Previously_flag, ReworkScanPreviously_flag. The selected SNs are assigned the respective checkpoint ID of the
-    flag and a dummy timestamp in the past.
-    :param async_pool: The asynchronous pool to access the DB
-    :return: A dataframe containing all the distinct SNs from the WIP table that have an active flag of the ones
-    mentioned
-    :rtype: pandas.DataFrame
-    """
-    query_packedPrev_flag = """
-                SELECT DISTINCT [SerialNumber], [ProductType]
-                FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
-                WHERE [PackedPreviously_flag] = 1;
-    """
-    query_voidSN_prev_flag = """
-                SELECT DISTINCT [SerialNumber], [ProductType]
-                FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
-                WHERE [VoidSN_Previously_flag] = 1;
-    """
-    query_rework_prev_flag = """
-                SELECT DISTINCT [SerialNumber], [ProductType]
-                FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
-                WHERE [ReworkScanPreviously_flag] = 1;
-    """
-    try:
-        time_tracker = dt.now()
-        async with async_pool.acquire() as db_conn:
-            async with db_conn.cursor() as cursor:
-                print("SELECT process for SNs with flags from WIP table is running in the background...")
-                # Execute the 3 queries
-                await cursor.execute(query_packedPrev_flag)
-                rows_fromPacked = await cursor.fetchall()
-
-                await cursor.execute(query_voidSN_prev_flag)
-                rows_fromVoided = await cursor.fetchall()
-
-                await cursor.execute(query_rework_prev_flag)
-                rows_fromReworked = await cursor.fetchall()
-                cols = [column[0] for column in cursor.description]
-
-                # Build a dataframe for each executed query
-                packedSNs_df = pd.DataFrame.from_records(rows_fromPacked, columns=cols)
-                voidedSNs_df = pd.DataFrame.from_records(rows_fromVoided, columns=cols)
-                reworkedSNs_df = pd.DataFrame.from_records(rows_fromReworked, columns=cols)
-    except Exception as e:
-        print(repr(e))
-        LOGGER.error(Messages.SQL_Q_ERROR.value, exc_info=True)
-        show_message(AlertType.FAILED)
-    else:
-        # Assign checkpoint ID and dummy timestamp in the past to each dataframe
-        dummy_date = dt.now() - timedelta(days=500)
-
-        packedSNs_df['CheckPointId'] = 300
-        packedSNs_df['CheckPointId'] = packedSNs_df['CheckPointId'].astype(int)
-        packedSNs_df['TransactionDate'] = dummy_date
-
-        voidedSNs_df['CheckPointId'] = 700
-        voidedSNs_df['CheckPointId'] = voidedSNs_df['CheckPointId'].astype(int)
-        voidedSNs_df['TransactionDate'] = dummy_date
-
-        reworkedSNs_df['CheckPointId'] = 801
-        reworkedSNs_df['CheckPointId'] = reworkedSNs_df['CheckPointId'].astype(int)
-        reworkedSNs_df['TransactionDate'] = dummy_date
-
-        # Concatenate all the dataframes into one, separate by type (server or rack) and return
-        print(f"SELECT process for SNs with flags from WIP table ran successfully. T: {dt.now() - time_tracker}")
-        flagged_SNs_df = pd.concat([packedSNs_df, voidedSNs_df, reworkedSNs_df], ignore_index=True)
-        return (flagged_SNs_df[flagged_SNs_df['ProductType'] == 'Server'].copy(),
-                flagged_SNs_df[flagged_SNs_df['ProductType'] == 'Rack'].copy())
 
 
 async def select_customers(async_pool):
@@ -186,6 +116,7 @@ async def select_customers(async_pool):
         print(repr(e))
         LOGGER.error(Messages.SQL_Q_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         azu_customer_df['Customer'] = 'AZU'
         amz_customer_df['Customer'] = 'AMZ'
@@ -260,6 +191,7 @@ async def select_ph_rawData(async_pool, date_threshold):
         print(repr(e))
         LOGGER.error(Messages.SQL_Q_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         # Ensure correct Serial Numbers by cleaning leading and trailing spaces
         ph_rawData_df['SerialNumber'] = ph_rawData_df['SerialNumber'].str.strip()
@@ -344,6 +276,7 @@ async def select_sap_historicalStatus(async_pool, date_threshold):
         print(repr(e))
         LOGGER.error(Messages.SQL_Q_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         # Ensure correct Serial Numbers by cleaning leading and trailing spaces
         sap_historySatuts_df['SerialNumber'] = sap_historySatuts_df['SerialNumber'].str.strip()
@@ -364,58 +297,64 @@ async def select_sap_historicalStatus(async_pool, date_threshold):
         return sr_sap_statusH_df, re_sap_statusH_df
 
 
-def select_wip_maxStatus(db_conn, isForUpdate=True):  # FIXME: Adapt to this script
+def select_wip_maxStatus(db_conn, packed=False):
     """
-    SELECT function to get the latest WIP status for each serial number that hasn't shipped yet
+    SELECT function to get the latest WIP status for each serial number that hasn't shipped yet or that it has already
+    been packed
     :param db_conn: The connection to the database
-    :param isForUpdate: Flag that indicates if the result of the query will be used to update the WIP table or not
+    :param packed: Flag to get packed SNs
     :return: A dataframe containing the WIP data of distinct units that have not shipped
     :rtype: pandas.DataFrame
     """
-    query = f"""
-        --SELECTS All the MAX SN, TransactionDate pairs that have a Not Shipped (Packed is Last status flag = False)
-        WITH maxTransT_CTE AS (
-            SELECT SerialNumber, MAX([TransactionDate]) AS MaxTransactionDate
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
-            {'' if isForUpdate else '--'}WHERE [PackedIsLast_flag] = 0
-            GROUP BY SerialNumber
-        )
-        --SELECTS All Columns of all units MAX transaction date that have a NotShipped status flag = True
-        {'' if isForUpdate else '--'},notShipped_CTE AS (
-            SELECT wip.{'SerialNumber' if isForUpdate else '*'}
+    if packed:
+        query = """
+            WITH maxTransT_CTE AS (
+                SELECT [SerialNumber], MAX([TransactionDate]) AS MaxTransactionDate
+                FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+                WHERE [PackedIsLast_flag] = 1
+                GROUP BY [SerialNumber]
+            )
+            SELECT wip.*
             FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS wip
             INNER JOIN maxTransT_CTE AS wipMax
-            ON wip.SerialNumber = wipMax.SerialNumber AND wip.[TransactionDate] = wipMax.MaxTransactionDate
-        {'' if isForUpdate else '--'})
-        {'' if isForUpdate else '/*'}
-        --SELECTS All columns from the entire WIP table of SNs that match the previous query
-        ,allWip_CTE AS (
-            SELECT *
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
-            WHERE SerialNumber IN (SELECT * FROM notShipped_CTE)
-        )
-        ,maxTransT2_CTE AS ( -- SELECTS All MAX SN, Transaction Date pairs from the previous query
-            SELECT SerialNumber, MAX([TransactionDate]) AS MaxTransactionDate
-            FROM allWip_CTE
-            GROUP BY SerialNumber
-        )
-        SELECT t1.*  -- SELECTS All columns of all units MAX transaction date from the previous query
-        FROM allWip_CTE AS t1
-        INNER JOIN maxTransT2_CTE AS t2
-        ON t1.SerialNumber = t2.SerialNumber AND t1.TransactionDate = t2.MaxTransactionDate;
-        {'' if isForUpdate else '*/'}
-    """
+            ON wip.SerialNumber = wipMax.SerialNumber AND wip.TransactionDate = wipMax.MaxTransactionDate
+            WHERE wip.[ProductType] = '{}';
+        """
+    else:
+        query = """
+            WITH maxTransT_CTE AS (
+                SELECT [SerialNumber], MAX([TransactionDate]) AS MaxTransactionDate
+                FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+                WHERE [PackedIsLast_flag] = 0
+                GROUP BY [SerialNumber]
+            )
+            SELECT wip.*
+            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS wip
+            INNER JOIN maxTransT_CTE AS wipMax
+            ON wip.SerialNumber = wipMax.SerialNumber AND wip.TransactionDate = wipMax.MaxTransactionDate
+            WHERE wip.[ProductType] = '{}';
+        """
     try:
         time_tracker = dt.now()
-        print(f"SELECT process for WIP data of distinct units {'that have not shipped ' if isForUpdate else ''}"
+        print(f"SELECT process for WIP max status of units that {'have been packed' if packed else 'have not shipped'} "
               f"is running in the background...\n")
-        wip_shipmentStatus_df = pd.read_sql_query(query, db_conn, parse_dates=['TransactionDate', 'WIP_SnapshotDate',
-                                                                               'ExtractionDate'])
+        wip_lastStatus_server_df = pd.read_sql_query(query.format('Server'), db_conn,
+                                                     parse_dates=['TransactionDate', 'WIP_SnapshotDate',
+                                                                  'ExtractionDate'])
+        wip_lastStatus_rack_df = pd.read_sql_query(query.format('Rack'), db_conn,
+                                                   parse_dates=['TransactionDate', 'WIP_SnapshotDate',
+                                                                'ExtractionDate'])
     except Exception as e:
         print(repr(e))
         LOGGER.error(Messages.SQL_Q_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
-        print(f"SELECT process for WIP data of distinct units {'that have not shipped ' if isForUpdate else ''}"
-              f"ran successfully\nT: {dt.now() - time_tracker}\n")
-        return wip_shipmentStatus_df
+        # Use only the latest transaction timestamp and latest WIP snapshot time
+        wip_lastStatus_server_df = wip_lastStatus_server_df.loc[wip_lastStatus_server_df.groupby('SerialNumber')
+                                                                ['WIP_SnapshotDate'].idxmax()].reset_index(drop=True)
+        wip_lastStatus_rack_df = wip_lastStatus_rack_df.loc[wip_lastStatus_rack_df.groupby('SerialNumber')
+                                                            ['WIP_SnapshotDate'].idxmax()].reset_index(drop=True)
+        print(f"SELECT process for WIP data of distinct units that have not shipped ran successfully\n"
+              f"T: {dt.now() - time_tracker}\n")
+        return wip_lastStatus_server_df, wip_lastStatus_rack_df

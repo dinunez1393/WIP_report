@@ -1,7 +1,7 @@
 # Classes
 import pandas as pd
 from utilities import fixed_date
-from datetime import timedelta
+from datetime import timedelta, time
 
 
 DAYS_BACK = 190
@@ -48,6 +48,10 @@ class UnitHistory:
 
         if starterCkps_df.shape[0] > 0:
             for snapshot_time in times:
+                # Break from the loop if this script is running before the fixed time
+                if self.today_now.time() < time(snapshot_time, 0):
+                    break
+
                 # Find the boundaries of this unit (minimum and maximum checkpoint timestamps)
                 min_timestamp = starterCkps_df['TransactionDate'].min(skipna=True)
                 max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
@@ -61,17 +65,29 @@ class UnitHistory:
                 voidSN_df = self.checkpoints_df[self.checkpoints_df['CheckPointId'] == 700]
                 rework_df = self.checkpoints_df[self.checkpoints_df['CheckPointId'] == 801]
 
+                # Assign dummy value in the past if the current instance came from WIP table and had the flag as True
                 # Assign dummy value in the future if the current instance does not have any of the flags
                 # (packing, void SN, rework)
-                if packing_df.shape[0] < 1:  # Packing
+                if (packing_df['PackedPreviously_flag'].notna().any() and
+                        int(packing_df['PackedPreviously_flag'].max(skipna=True))):  # Packing
+                    least_packingDate = self.today_now - timedelta(days=500)
+                elif packing_df.shape[0] < 1:
                     least_packingDate = self.today_now + timedelta(days=10)
                 else:
                     least_packingDate = packing_df['TransactionDate'].min(skipna=True)
-                if voidSN_df.shape[0] < 1:  # Void SN
+
+                if (voidSN_df['VoidSN_Previously_flag'].notna().any() and
+                        int(voidSN_df['VoidSN_Previously_flag'].max(skipna=True))):  # Void SN
+                    voidSN_date = self.today_now - timedelta(days=500)
+                elif voidSN_df.shape[0] < 1:
                     voidSN_date = self.today_now + timedelta(days=10)
                 else:
                     voidSN_date = voidSN_df['TransactionDate'].min(skipna=True)
-                if rework_df.shape[0]:  # Re-work scan
+
+                if (rework_df['ReworkScanPreviously_flag'].notna().any() and
+                        int(rework_df['ReworkScanPreviously_flag'].max(skipna=True))):  # Re-work scan
+                    rework_date = self.today_now - timedelta(days=500)
+                elif rework_df.shape[0] < 1:
                     rework_date = self.today_now + timedelta(days=10)
                 else:
                     rework_date = rework_df['TransactionDate'].min(skipna=True)
@@ -112,6 +128,10 @@ class UnitHistory:
                             current_date = fixed_date(minThreshold, fixedHour=snapshot_time)
                     else:
                         current_date = fixed_date(minThreshold, fixedHour=snapshot_time)
+
+                # Assign the WIP snapshot date to current date if unit comes from WIP table
+                if starterCkps_df['WIP_SnapshotTime'].notna().any():
+                    current_date = starterCkps_df['WIP_SnapshotTime'].max(skipna=True)
 
                 # Iterate between the boundaries to find the location (process and area) of this unit for each day
                 while current_date <= actual_upperBoundary:

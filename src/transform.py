@@ -16,7 +16,6 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     Function that uses the SQL extraction functions to extract raw data and distribute the data to be ready for cleaning
     Note: The data is not totally raw. It has passed some processing by merging.
     :param async_pool_asbuilt: Asynchronous pool for Asbuilt DB
-    # :param async_pool_sbi: Asynchronous pool for SBI DB
     :param conn_sbi: The connection for SBI DB
     :return: A tuple containing four dataframes for rack and server raw data
     :rtype: tuple
@@ -40,7 +39,6 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
     re_rawData_df, sr_rawData_df = results[0]
     sr_sap_statusH_df, re_sap_statusH_df = results[1]
     customers_df = results[2]
-    # srSNs_with_flags_df, reSNs_with_flags_df = results[3]  # Currently inactive  # FIXME: Possibly obsolete
 
     # Purge Rack Build, End-of-Line and Rack Hi-Pot data that might be in server data to avoid having
     # duplicates further on
@@ -61,16 +59,19 @@ async def get_raw_data(async_pool_asbuilt, conn_sbi):
 
     print(f"\nTOTAL raw data allocation time: {dt.now() - allocation_start}")
 
-    return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df  # , srSNs_with_flags_df, reSNs_with_flags_df - FIXME
+    return re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df
 
 
-def assign_wip(semaphore, isServerLevel=True):
+def assign_wip(semaphore, isServerLevel=True, unship_wip_data_df=None, ship_wip_data_df=None, unpacked_SNs=None):
     """
     Function that cleans the processed raw data to make a full WIP report and uses another function to
      export the cleaned data to SQL or CSV
     :param semaphore: Semaphore for concurrent loading processes
     :type semaphore: multiprocessing.Semaphore
     :param isServerLevel: a flag that indicates whether the raw data is server data or rack data
+    :param unship_wip_data_df: additional data of unshipped units that needs to update. This data comes from WIP table
+    :param ship_wip_data_df: additional data of shipped units that might need to update. This data comes from WIP table
+    :param unpacked_SNs: list object with possible unpacked SNs
     """
 
     # Process number
@@ -102,16 +103,59 @@ def assign_wip(semaphore, isServerLevel=True):
              'Rack Build': [200, 235, 254, 208, 252],
              'System Test': [150, 170],
              'End of Line': [216, 218, 260, 202, 243, 2470, 228, 270, 237, 230, 300, 301, 1510, 234, 302]}
-    wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'StockCodePrefix', 'SKU', 'CheckPointId',  # TODO: Add the new columns
+    wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'StockCodePrefix', 'SKU', 'CheckPointId',
                    'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'WIP_SnapshotTime', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
                    'ProductType', 'Customer', 'PackedIsLast_flag', 'PackedPreviously_flag',
                    'VoidSN_Previously_flag', 'ReworkScanPreviously_flag',
-                   'ETL_time']  # 'isFrom_WIP' - Disabled indefinitely
+                   'ETL_time', 'Updated_time']
     distinctSN_count = rawData_df['SerialNumber'].nunique()
+
+    if distinctSN_count == 0:  # Dummy value in case distinct SN is 0, to avoid division by 0 further below
+        distinctSN_count = -1
 
     # Reindex the raw data and concatenate with existing data from WIP table
     rawData_df = rawData_df.reindex(columns=wip_columns)
+
+    if pro_num == 1 or pro_num == 5:
+        # Concatenate imported wip data with still open status (not packed) to raw data
+        if unship_wip_data_df.shape[0] > 0:
+            unship_wip_data_df = unship_wip_data_df.rename(columns={'CheckpointID': 'CheckPointId',
+                                                                    'CheckpointName': 'CheckPointName',
+                                                                    'ProcessArea': 'Area',
+                                                                    'TransactionID': 'TransID',
+                                                                    'WIP_SnapshotDate': 'WIP_SnapshotTime',
+                                                                    'ExtractionDate': 'ETL_time',
+                                                                    'LatestUpdateDate': 'Updated_time'})
+            unship_wip_data_df['Updated_time'] = datetime_from_py_to_sql(dt.now())
+
+            # Add 1 day to WIP snapshot time, so that the right WIP can be counted
+            unship_wip_data_df['WIP_SnapshotTime'] = unship_wip_data_df['WIP_SnapshotTime'] + pd.Timedelta(days=1)
+
+            rawData_df = pd.concat([rawData_df, unship_wip_data_df], ignore_index=True)
+
+        # Concatenate WIP packed data that might have been unpacked and restored into the process
+        if ship_wip_data_df.shape[0] > 0:
+            # Find if there are SNs that were unpacked and restored into the process
+            mask = ship_wip_data_df['SerialNumber'].isin(rawData_df['SerialNumber'])
+            ship_wip_data_df = ship_wip_data_df[mask]
+
+            if ship_wip_data_df.shape[0] > 0:
+                ship_wip_data_df = ship_wip_data_df.rename(columns={'CheckpointID': 'CheckPointId',
+                                                                    'CheckpointName': 'CheckPointName',
+                                                                    'ProcessArea': 'Area',
+                                                                    'TransactionID': 'TransID',
+                                                                    'WIP_SnapshotDate': 'WIP_SnapshotTime',
+                                                                    'ExtractionDate': 'ETL_time',
+                                                                    'LatestUpdateDate': 'Updated_time'})
+                ship_wip_data_df['Updated_time'] = datetime_from_py_to_sql(dt.now())
+
+                # Add 1 day to WIP snapshot time, so that the right WIP can be counted
+                ship_wip_data_df['WIP_SnapshotTime'] = ship_wip_data_df['WIP_SnapshotTime'] + pd.Timedelta(days=1)
+
+                rawData_df = pd.concat([rawData_df, ship_wip_data_df], ignore_index=True)
+
+                unpacked_SNs.extend(ship_wip_data_df['SerialNumber'].tolist())
 
     # Group the product history raw data and the SAP historical status data by Serial Number
     ph_instances_grouped = rawData_df.groupby('SerialNumber')
@@ -254,64 +298,3 @@ def assign_wip(semaphore, isServerLevel=True):
 
     # Load results
     load_wip_data(final_wip_df, semaphore, to_csv=False, isServer=isServerLevel)
-
-
-# OBSOLETE:
-def assign_shipmentStatus(db_conn):
-    """
-    Function gets all units that did not have shipment status and updates the current dwell time. If a new
-    shipment status exists since the latest INSERT run, then the NotShipped flag is updated accordingly
-    :param db_conn: The connection to the database
-    :return: a dataframe with the latest shipment information updated
-    :rtype: pandas.DataFrame
-    """
-    criticalShipment_ckps = {300, 301, 302}
-    today_upperBoundary = fixed_date(select_wip_maxDate(db_conn, snapshotTime=True))
-
-    wip_df = select_wip_maxStatus(db_conn)
-    wip_df = wip_df.drop(columns=['LatestUpdateDate'])
-    wip_df_columns = wip_df.columns.tolist()
-
-    wip_grouped = wip_df.groupby('SerialNumber')
-
-    wip_shipped_SNs = set()
-    wip_stillNotShipped_tuples = []
-
-    # Find the units that do not have Shipping Scan (for rack shipment) nor Carton Scan (for single servers)
-    for serialNumber, wipHistory_df in tqdm(wip_grouped, desc="Assigning Shipment Status"):
-        wipHistory_df = wipHistory_df.sort_values('WIP_SnapshotDate', ascending=False)
-        max_ckp = wipHistory_df['CheckpointID'].iloc[0]
-        max_timestamp = wipHistory_df['TransactionDate'].max(skipna=True)
-        instance_upper_boundary = wipHistory_df['WIP_SnapshotDate'].max(skipna=True)
-
-        if max_ckp in criticalShipment_ckps:
-            wip_shipped_SNs.add(serialNumber)
-        else:
-            # Add WIP for all days from the latest instance timestamp to current date (today)
-            current_date = instance_upper_boundary + timedelta(days=1)
-            while current_date <= today_upperBoundary:
-                if current_date < max_timestamp:
-                    current_date = current_date + timedelta(days=1)
-                    continue
-
-                wipHistory_df['WIP_SnapshotDate'] = current_date
-                wipHistory_df['DwellTime_calendar'] = delta_working_hours(max_timestamp, current_date)
-                wipHistory_df['DwellTime_working'] = delta_working_hours(max_timestamp, current_date, calendar=False)
-                max_row_tuple = tuple(wipHistory_df.values[0])  # Convert to tuple for faster loading of data
-                wip_stillNotShipped_tuples.append(max_row_tuple)
-                current_date = current_date + timedelta(days=1)
-
-    # Create the WIP shipped dataframe
-    wip_shipped_df = pd.DataFrame(wip_shipped_SNs, columns=['SerialNumber'])
-
-    # Create the WIP not-shipped dataframe
-    wip_stillNotShipped_df = pd.DataFrame(wip_stillNotShipped_tuples, columns=wip_df_columns)
-    wip_stillNotShipped_df['ExtractionDate'] = datetime_from_py_to_sql(dt.now())
-    wip_stillNotShipped_df['TransactionDate'] = \
-        wip_stillNotShipped_df['TransactionDate'].apply(datetime_from_py_to_sql)
-    wip_stillNotShipped_df['WIP_SnapshotDate'] = \
-        wip_stillNotShipped_df['WIP_SnapshotDate'].apply(datetime_from_py_to_sql)
-
-    unshipped_toUpdate_df = pd.DataFrame(set(wip_stillNotShipped_df['SerialNumber']), columns=['SerialNumber'])
-
-    return wip_shipped_df, unshipped_toUpdate_df, wip_stillNotShipped_df

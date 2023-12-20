@@ -189,11 +189,12 @@ def items_to_SQL_values(collection, isForUpdate=True, chunk_size=1_000):
         sql_values = ["(" + "'" + item + "'" + ")" + "," for item in collection]
         for item in tqdm(sql_values, total=len(sql_values), desc="Creating SQL Values list"):
             sql_values_str += item
+        return sql_values_str[:-1]
     else:  # Placeholder values for INSERT query
         sql_values_str = "('{}', '{}', '{}', '{}', '{}', '{}', {}, '{}', '{}', {}, '{}', '{}', '{}', {}, {}, " \
-                          "'{}', '{}', '{}', '{}', {}, {}, {}, {}, '{}'),"
+                          "'{}', '{}', '{}', '{}', {}, {}, {}, {}, '{}', '{}'),"
         sql_values_str *= chunk_size
-    return sql_values_str.format(*collection)[:-1]  # Omit the last comma
+        return sql_values_str.format(*collection)[:-1]  # Omit the last comma
 
 
 def df_splitter(dataframe, category_name='SerialNumber'):

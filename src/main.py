@@ -1,7 +1,7 @@
 from transform import *
 from db_conn import *
 from alerts import *
-from extraction import select_wipTable_count
+from extraction import select_wip_maxStatus
 from loading import *
 from update import *
 from delete import *
@@ -22,7 +22,6 @@ DATABASE_NAME_asbuilt = 'ASBuiltDW'
 LOGGER = logger_creator('RunTime_Error')
 
 
-# TODO: Adapt to new logic
 async def initializer(connection_sbi):
     """
     Function that initializes the raw data
@@ -41,6 +40,7 @@ async def initializer(connection_sbi):
         print(repr(err))
         LOGGER.error(Messages.GENERIC_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         print("ASYNC DB Connections ran successfully\n")
         # Close all DB connections
@@ -60,12 +60,13 @@ if __name__ == '__main__':
         # Supress all warning messages
         warnings.simplefilter("ignore")
 
-        # Check if the WIP table is empty
-        wip_count = select_wipTable_count(conn_sbi)
+        # Check the WIP semaphore
+        with open('semaphore.txt', 'r') as semaphore_file:
+            program_semaphore = int(semaphore_file.readline())
 
-        if wip_count > 0:  # Perform raw data extraction
-            # Clear WIP table for fresh upload
-            delete_allData(conn_sbi)
+        if program_semaphore == 0:  # Perform raw data extraction
+            # Clear WIP table old records
+            delete_oldData(conn_sbi)
 
             # Get all the raw data
             re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
@@ -99,40 +100,68 @@ if __name__ == '__main__':
             re_sap_statusH_df.to_hdf("../CleanedRecords_csv/sap_historyData_p5.h5", index=False, key='data', mode='w')
             print(f"Export complete. T: {dt.now() - export_start}")
 
+            # Update the WIP semaphore
+            with open('semaphore.txt', 'w') as semaphore_file:
+                semaphore_file.write('1')
+
         else:  # Perform transformation and loading
             # Clean the data in multiple processes and make a WIP report
             semaphore = multiprocessing.Semaphore(1)  # Semaphore with counter value of 1 for concurrent data upload
-            
-            process_1_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_1")
-            process_2_sr = multiprocessing.Process(target=assign_wip,  args=(semaphore,), name="SR_Pro_2")
-            process_3_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_3")
-            process_4_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_4")
-            process_re = multiprocessing.Process(target=assign_wip, args=(semaphore, False), name="RE_Pro")
 
-            process_1_sr.start()
-            process_2_sr.start()
-            process_3_sr.start()
-            process_4_sr.start()
-            process_re.start()
+            # Import unshipped and shipped data from WIP table
+            unship_lastStatus_server_df, unship_lastStatus_rack_df = select_wip_maxStatus(conn_sbi)
+            ship_lastStatus_server_df, ship_lastStatus_rack_df = select_wip_maxStatus(conn_sbi, packed=True)
 
-            process_1_sr.join()
-            process_2_sr.join()
-            process_3_sr.join()
-            process_4_sr.join()
-            process_re.join()
+            with multiprocessing.Manager() as manager:
+                unpacked_SNs = manager.list()
 
-            # Update order type and factory status NULL values
-            update_orderType_factoryStatus(conn_sbi, saved_as_csv=False)
+                process_1_sr = multiprocessing.Process(target=assign_wip, args=(semaphore, True,
+                                                                                unship_lastStatus_server_df,
+                                                                                ship_lastStatus_server_df,
+                                                                                unpacked_SNs),
+                                                       name="SR_Pro_1")
+
+                process_2_sr = multiprocessing.Process(target=assign_wip,  args=(semaphore,), name="SR_Pro_2")
+                process_3_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_3")
+                process_4_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_4")
+
+                process_re = multiprocessing.Process(target=assign_wip, args=(semaphore, False,
+                                                                              unship_lastStatus_rack_df,
+                                                                              ship_lastStatus_rack_df,
+                                                                              unpacked_SNs),
+                                                     name="RE_Pro")
+
+                process_1_sr.start()
+                process_2_sr.start()
+                process_3_sr.start()
+                process_4_sr.start()
+                process_re.start()
+
+                process_1_sr.join()
+                process_2_sr.join()
+                process_3_sr.join()
+                process_4_sr.join()
+                process_re.join()
+
+                # Update order type and factory status NULL values
+                update_str_nulls(conn_sbi)
+                # Update shipment status flag (packed is last)
+                update_shipmentFlag(conn_sbi, unpacked_SNs)
+
+            # Update the WIP semaphore
+            with open('semaphore.txt', 'w') as semaphore_file:
+                semaphore_file.write('0')
     except Exception as e:
         print(repr(e))
         LOGGER.error(Messages.GENERIC_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         print("DB Connection ran successfully\n")
         # Close all DB connections
         conn_sbi.close()
         show_goodbye()
         print(f"Total program duration: {dt.now() - program_start}")
-        if wip_count == 0:
+        if program_semaphore == 1:
             show_message(AlertType.SUCCESS)
             sys.exit()

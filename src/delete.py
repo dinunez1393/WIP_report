@@ -2,6 +2,7 @@
 from alerts import *
 from utilities import show_message, logger_creator
 from datetime import datetime as dt, timedelta
+import sys
 
 
 LOGGER = logger_creator('DELETE_Error')
@@ -12,9 +13,10 @@ def delete_oldData(db_conn):
     Delete function for clearing old WIP data
     :param db_conn: The connection to the database
     """
-    query = """
+    days_threshold = 185
+    query = f"""
         DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
-        WHERE [WIP_SnapshotDate] < DATEADD(DAY, -400, GETDATE());
+        WHERE [WIP_SnapshotDate] < DATEADD(DAY, -{days_threshold}, GETDATE());
     """
 
     try:
@@ -26,9 +28,10 @@ def delete_oldData(db_conn):
         print(repr(e))
         LOGGER.error(Messages.SQL_D_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         db_conn.commit()
-        print(f"WIP data prior to {dt.now() - timedelta(days=185)} has been deleted successfully\n"
+        print(f"WIP data prior to {dt.now() - timedelta(days=days_threshold)} has been deleted successfully\n"
               f"T: {dt.now() - delete_start}\n")
 
 
@@ -48,6 +51,7 @@ def delete_allData(db_conn):
         print(repr(e))
         LOGGER.error(Messages.SQL_D_ERROR.value, exc_info=True)
         show_message(AlertType.FAILED)
+        sys.exit()
     else:
         db_conn.commit()
         print(f"WIP table has been cleared\nT: {dt.now() - delete_start}\n")
