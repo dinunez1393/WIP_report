@@ -118,9 +118,11 @@ class UnitHistory:
                     actual_upperBoundary = fixed_date(max_timestamp, fixedHour=snapshot_time)
                     PackedIsLast_flag = False
 
-                current_date = fixed_date(min_timestamp, fixedHour=snapshot_time)
+                # Assign the WIP snapshot date to current date if unit comes from WIP table
+                if starterCkps_df['WIP_SnapshotTime'].notna().any():
+                    current_date = starterCkps_df['WIP_SnapshotTime'].max(skipna=True)
                 # Set usable data for very old instances  # Use only for initial population of the SQL table
-                if min_timestamp < minThreshold:
+                elif min_timestamp < minThreshold:
                     if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
                         if max_timestamp < minThreshold:  # Void very old instances that already shipped
                             return []
@@ -128,10 +130,8 @@ class UnitHistory:
                             current_date = fixed_date(minThreshold, fixedHour=snapshot_time)
                     else:
                         current_date = fixed_date(minThreshold, fixedHour=snapshot_time)
-
-                # Assign the WIP snapshot date to current date if unit comes from WIP table
-                if starterCkps_df['WIP_SnapshotTime'].notna().any():
-                    current_date = starterCkps_df['WIP_SnapshotTime'].max(skipna=True)
+                else:
+                    current_date = fixed_date(min_timestamp, fixedHour=snapshot_time)
 
                 # Iterate between the boundaries to find the location (process and area) of this unit for each day
                 while current_date <= actual_upperBoundary:
