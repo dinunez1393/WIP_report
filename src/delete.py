@@ -15,7 +15,7 @@ def delete_oldData(db_conn):
     """
     days_threshold = 185
     query = f"""
-        DELETE FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+        DELETE FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual]
         WHERE [WIP_SnapshotDate] < DATEADD(DAY, -{days_threshold}, GETDATE());
     """
 
@@ -40,7 +40,7 @@ def delete_allData(db_conn):
     Delete function truncates the WIP table
     :param db_conn: The connection to the database
     """
-    query = "TRUNCATE TABLE [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual];"
+    query = "TRUNCATE TABLE [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual];"
 
     try:
         delete_start = dt.now()

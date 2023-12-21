@@ -100,7 +100,7 @@ def load_wip_data(wip_df, semaphore, to_csv=False, isServer=True):
             """
             drop_query_temp = f"DROP TABLE [SBILearning].[dbo].temp_tbl_Production_WIP_history_{pro_num};"
             insert_query_main = f"""
-                    INSERT INTO [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+                    INSERT INTO [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual]
                     SELECT * FROM [SBILearning].[dbo].temp_tbl_Production_WIP_history_{pro_num};
             """
             # INSERT new records into DB

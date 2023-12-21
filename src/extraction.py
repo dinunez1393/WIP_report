@@ -21,7 +21,7 @@ def select_wipTable_count(db_conn):
     :return: The number of items from the WIP table
     :rtype: int
     """
-    query = "SELECT COUNT(*) FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual];"
+    query = "SELECT COUNT(*) FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual];"
 
     try:
         with db_conn.cursor() as cursor:
@@ -45,7 +45,7 @@ def select_wip_maxDate(db_conn, snapshotTime=False):
     :rtype: datetime.datetime
     """
     query = f"SELECT MAX([{'WIP_SnapshotDate' if snapshotTime else 'TransactionDate'}])" \
-            f" FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual];"
+            f" FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual];"
     print("SELECT process for MAX date from WIP is running in the background...")
 
     try:
@@ -310,12 +310,12 @@ def select_wip_maxStatus(db_conn, packed=False):
         query = """
             WITH maxTransT_CTE AS (
                 SELECT [SerialNumber], MAX([TransactionDate]) AS MaxTransactionDate
-                FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+                FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual]
                 WHERE [PackedIsLast_flag] = 1
                 GROUP BY [SerialNumber]
             )
             SELECT wip.*
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS wip
+            FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual] AS wip
             INNER JOIN maxTransT_CTE AS wipMax
             ON wip.SerialNumber = wipMax.SerialNumber AND wip.TransactionDate = wipMax.MaxTransactionDate
             WHERE wip.[ProductType] = '{}';
@@ -324,12 +324,12 @@ def select_wip_maxStatus(db_conn, packed=False):
         query = """
             WITH maxTransT_CTE AS (
                 SELECT [SerialNumber], MAX([TransactionDate]) AS MaxTransactionDate
-                FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+                FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual]
                 WHERE [PackedIsLast_flag] = 0
                 GROUP BY [SerialNumber]
             )
             SELECT wip.*
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS wip
+            FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual] AS wip
             INNER JOIN maxTransT_CTE AS wipMax
             ON wip.SerialNumber = wipMax.SerialNumber AND wip.TransactionDate = wipMax.MaxTransactionDate
             WHERE wip.[ProductType] = '{}';

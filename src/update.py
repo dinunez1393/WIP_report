@@ -18,14 +18,14 @@ def update_shipmentFlag(db_conn, wip_unpacked):
     update_shipped_query = f"""
         WITH shipped_CTE AS (
             SELECT DISTINCT [SerialNumber]
-            FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+            FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual]
             WHERE [PackedIsLast_flag] = 1
         )
     
         UPDATE o
         SET o.[PackedIsLast_flag] = 1,
             o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
-        FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
+        FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual] AS o
         JOIN shipped_CTE AS u
         ON o.[SerialNumber] = u.[SerialNumber]
     """
@@ -42,7 +42,7 @@ def update_shipmentFlag(db_conn, wip_unpacked):
         UPDATE o
         SET o.[PackedIsLast_flag] = 0,
             o.[LatestUpdateDate] = '{datetime_from_py_to_sql(dt.now())}'
-        FROM [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual] AS o
+        FROM [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual] AS o
         JOIN SerialNumber_CTE AS u
         ON o.[SerialNumber] = u.[SerialNumber]
     """
@@ -77,7 +77,7 @@ def update_str_nulls(db_conn):
     :param db_conn: the connection to the database
     """
     update_query = """
-                UPDATE [SBILearning].[dbo].[DNun_tbl_Production_OngoingWIP_Actual]
+                UPDATE [SBIDev].[dbo].[tbl_Production_OngoingWIP_Actual]
                 SET [OrderType] =
                     CASE
                         WHEN [OrderType] = 'NULL'
