@@ -99,10 +99,10 @@ def assign_wip(semaphore, isServerLevel=True, unship_wip_data_df=None, ship_wip_
     counter = 0
     wip_list = []
     master_list = []
-    areas = {'Server Build': [100, 101],
-             'Rack Build': [200, 235, 254, 208, 252],
-             'System Test': [150, 170],
-             'End of Line': [216, 218, 260, 202, 243, 2470, 228, 270, 237, 230, 300, 301, 1510, 234, 302]}
+    areas = {'Server Build': [100],
+             'Rack Build': [101, 200, 235, 254, 208, 252],
+             'System Test': [150],
+             'End of Line': [170, 216, 218, 260, 202, 243, 2470, 228, 270, 237, 230, 300, 301, 1510, 234, 302]}
     wip_columns = ['Site', 'Building', 'SerialNumber', 'StockCode', 'StockCodePrefix', 'SKU', 'CheckPointId',
                    'CheckPointName', 'Area', 'TransID', 'TransactionDate', 'WIP_SnapshotTime', 'SnapshotTime',
                    'DwellTime_calendar', 'DwellTime_working', 'OrderType', 'FactoryStatus',
