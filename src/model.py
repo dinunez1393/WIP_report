@@ -48,10 +48,6 @@ class UnitHistory:
 
         if starterCkps_df.shape[0] > 0:
             for snapshot_time in times:
-                # Break from the loop if this script is running before the fixed time
-                if self.today_now.time() < time(snapshot_time, 0):
-                    break
-
                 # Find the boundaries of this unit (minimum and maximum checkpoint timestamps)
                 min_timestamp = starterCkps_df['TransactionDate'].min(skipna=True)
                 max_timestamp = starterCkps_df['TransactionDate'].max(skipna=True)
@@ -135,6 +131,11 @@ class UnitHistory:
 
                 # Iterate between the boundaries to find the location (process and area) of this unit for each day
                 while current_date <= actual_upperBoundary:
+                    # Break from the loop if this script is running before the fixed time of the current day
+                    if (self.today_now.date() == current_date.date()) and (
+                            self.today_now.time() < time(snapshot_time, 0)):
+                        break
+
                     # Get the starter checkpoints whose timestamps are less than current date
                     day_ckps_df = starterCkps_df[starterCkps_df['TransactionDate'] <= current_date]
                     if len(day_ckps_df['TransactionDate']) < 1:
