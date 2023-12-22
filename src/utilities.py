@@ -8,7 +8,7 @@ import logging
 from tqdm import tqdm
 
 
-SCRIPT_ON_SERVER = False
+SCRIPT_ON_SERVER = True
 ERRORS_LOG = "../Logging/errors.log"
 
 
@@ -36,7 +36,7 @@ def datetime_from_py_to_sql(py_datetime):
     return py_datetime.__str__()[:23]
 
 
-def logger_creator(logger_name, logger_type='ERROR', logFile_location=ERRORS_LOG, script_onServer=SCRIPT_ON_SERVER):
+def logger_creator(logger_name, logger_type='ERROR', logFile_location=ERRORS_LOG, script_onServer=False):
     """
     Function creates a logger object
     :param logger_name: the name assigned to the logger instance
