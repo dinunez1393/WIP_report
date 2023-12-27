@@ -1,4 +1,5 @@
 # Utilities functions
+import os
 from datetime import datetime as dt, time, timedelta
 import tkinter as tk
 from tkinter import messagebox
@@ -6,10 +7,13 @@ from alerts import *
 import time as ti
 import logging
 from tqdm import tqdm
+from pathlib import Path
 
 
 SCRIPT_ON_SERVER = True
-ERRORS_LOG = "../Logging/errors.log"
+SRC_FOLDER = Path(__file__).parent
+os.chdir(SRC_FOLDER)
+ERRORS_LOG = rf"{SRC_FOLDER.parent}{os.sep}Logging{os.sep}errors.log"
 
 
 def fixed_date(dayDateTime, fixedHour=9):
