@@ -1,7 +1,7 @@
 # Classes
 import pandas as pd
 from utilities import fixed_date
-from datetime import timedelta, time
+from datetime import timedelta, time, datetime as dt
 
 
 DAYS_BACK = 190
@@ -116,7 +116,8 @@ class UnitHistory:
 
                 # Assign the WIP snapshot date to current date if unit comes from WIP table
                 if starterCkps_df['WIP_SnapshotTime'].notna().any():
-                    current_date = starterCkps_df['WIP_SnapshotTime'].max(skipna=True)
+                    maxWip_date = starterCkps_df['WIP_SnapshotTime'].max(skipna=True).date()
+                    current_date = dt.combine(maxWip_date, time(snapshot_time, 0))
                 # Set usable data for very old instances  # Use only for initial population of the SQL table
                 elif min_timestamp < minThreshold:
                     if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
