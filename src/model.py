@@ -1,7 +1,7 @@
 # Classes
 import pandas as pd
 from utilities import fixed_date
-from datetime import timedelta, time
+from datetime import timedelta, time, datetime as dt
 
 
 DAYS_BACK = 190
@@ -45,6 +45,8 @@ class UnitHistory:
         starterCkps_df = self.checkpoints_df[mask]
         wipHistory_tuples = []
         times = [9, 15]  # WIP Snapshot times: 9AM and 3PM
+        wipMax_firstDay = False
+        stay_currentDate = False
 
         if starterCkps_df.shape[0] > 0:
             for snapshot_time in times:
@@ -116,7 +118,17 @@ class UnitHistory:
 
                 # Assign the WIP snapshot date to current date if unit comes from WIP table
                 if starterCkps_df['WIP_SnapshotTime'].notna().any():
-                    current_date = starterCkps_df['WIP_SnapshotTime'].max(skipna=True)
+                    maxWip_datetime = starterCkps_df['WIP_SnapshotTime'].max(skipna=True)
+                    maxWip_date = maxWip_datetime.date()
+                    # If the hour portion of the max wip datetime is equal to the max snapshot time,
+                    # then it's OK to use the WIP date from the df
+                    if maxWip_datetime.hour == times[-1]:
+                        current_date = dt.combine(maxWip_date, time(snapshot_time, 0))
+                    else:
+                        current_date = dt.combine(maxWip_date, time(snapshot_time, 0)) - timedelta(days=1)
+                        wipMax_firstDay = True
+                        if snapshot_time > maxWip_datetime.hour:
+                            stay_currentDate = True
                 # Set usable data for very old instances  # Use only for initial population of the SQL table
                 elif min_timestamp < minThreshold:
                     if starterCkps_df['CheckPointId'].iloc[0] in self.shipmentCkps:
@@ -135,6 +147,13 @@ class UnitHistory:
                     if (self.today_now.date() == current_date.date()) and (
                             self.today_now.time() < time(snapshot_time, 0)):
                         break
+
+                    # Skip to the next day if this unit instance had WIP record and the hour portion of the
+                    # WIP datetime is less than the current snapshot time
+                    if wipMax_firstDay and not stay_currentDate:
+                        current_date = current_date + timedelta(days=1)
+                        wipMax_firstDay = stay_currentDate = False
+                        continue
 
                     # Get the starter checkpoints whose timestamps are less than current date
                     day_ckps_df = starterCkps_df[starterCkps_df['TransactionDate'] <= current_date]
