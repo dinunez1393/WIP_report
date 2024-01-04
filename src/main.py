@@ -12,6 +12,8 @@ from utilities import *
 import asyncio
 import multiprocessing
 import sys
+import os
+from pathlib import Path
 
 
 SERVER_NAME_sbi = 'WQMSDEV01'
@@ -51,6 +53,10 @@ async def initializer(connection_sbi):
 
 
 if __name__ == '__main__':
+    # Change Working Directory to the SRC Folder
+    SRC_FOLDER = Path(__file__).parent
+    os.chdir(SRC_FOLDER)
+
     print(f"WIP ANALYSIS\n"
           f"({dt.now()})\n\n_______________________________________________________________________________________")
     program_start = dt.now()

@@ -6,10 +6,13 @@ from alerts import *
 import time as ti
 import logging
 from tqdm import tqdm
+from pathlib import Path
+import os
 
 
 SCRIPT_ON_SERVER = False
-ERRORS_LOG = "../Logging/errors.log"
+SRC_FOLDER = Path(__file__).parent
+ERRORS_LOG = rf"{SRC_FOLDER.parent}{os.sep}Logging{os.sep}errors.log"
 
 
 def fixed_date(dayDateTime, fixedHour=9):
