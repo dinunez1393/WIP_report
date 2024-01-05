@@ -13,6 +13,7 @@ import asyncio
 import multiprocessing
 import sys
 import os
+import extern_vars
 from pathlib import Path
 
 
@@ -159,6 +160,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(repr(e))
         LOGGER.error(Messages.GENERIC_ERROR.value, exc_info=True)
+        extern_vars.success_flag = 0
         show_message(AlertType.FAILED)
         sys.exit()
     else:
@@ -166,7 +168,5 @@ if __name__ == '__main__':
         # Close all DB connections
         conn_sbi.close()
         show_goodbye()
-        print(f"Total program duration: {dt.now() - program_start}")
-        if program_semaphore == 1:
-            show_message(AlertType.SUCCESS)
-            sys.exit()
+        print(f"Program duration: {dt.now() - program_start}")
+        extern_vars.success_flag = 1
