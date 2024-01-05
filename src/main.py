@@ -53,9 +53,7 @@ async def initializer(connection_sbi):
 
 
 if __name__ == '__main__':
-    # Change Working Directory to the SRC Folder
-    SRC_FOLDER = Path(__file__).parent
-    os.chdir(SRC_FOLDER)
+    SRC_FOLDER = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
 
     print(f"WIP ANALYSIS\n"
           f"({dt.now()})\n\n_______________________________________________________________________________________")
@@ -66,85 +64,97 @@ if __name__ == '__main__':
         # Supress all warning messages
         warnings.simplefilter("ignore")
 
-        # Perform raw data extraction
-        # Clear WIP table old records
-        delete_oldData(conn_sbi)
+        # Check the WIP semaphore
+        with open('semaphore.txt', 'r') as semaphore_file:
+            program_semaphore = int(semaphore_file.readline())
 
-        # Get all the raw data
-        re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
+        if program_semaphore == 0:  # Perform raw data extraction
+            # Clear WIP table old records
+            delete_oldData(conn_sbi)
 
-        # Given that the SR dataframe is very large, it is split into four, so that it feeds four cleaning processes
-        splitting_start = dt.now()
-        print("Splitting the SR dataframe in the background...")
-        sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_df_4, sr_rawData_cats_1, sr_rawData_cats_2, \
-            sr_rawData_cats_3, sr_rawData_cats_4 = df_splitter(sr_rawData_df)
-        print(f"SR dataframe split complete. T: {dt.now() - splitting_start}")
-        splitting_start = dt.now()
-        print("Splitting the SR SAP dataframe in the background...")
-        sr_sap_statusH_df_1 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_1)]
-        sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
-        sr_sap_statusH_df_3 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_3)]
-        sr_sap_statusH_df_4 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_4)]
-        print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
+            # Get all the raw data
+            re_rawData_df, sr_rawData_df, sr_sap_statusH_df, re_sap_statusH_df = asyncio.run(initializer(conn_sbi))
 
-        # Export raw data to HDF5
-        export_start = dt.now()
-        print("Exporting raw data to HDF5\n")
-        sr_rawData_df_1.to_hdf("../CleanedRecords_csv/wip_rawData_p1.h5", index=False, key='data', mode='w')
-        sr_rawData_df_2.to_hdf("../CleanedRecords_csv/wip_rawData_p2.h5", index=False, key='data', mode='w')
-        sr_rawData_df_3.to_hdf("../CleanedRecords_csv/wip_rawData_p3.h5", index=False, key='data', mode='w')
-        sr_rawData_df_4.to_hdf("../CleanedRecords_csv/wip_rawData_p4.h5", index=False, key='data', mode='w')
-        re_rawData_df.to_hdf("../CleanedRecords_csv/wip_rawData_p5.h5", index=False, key='data', mode='w')
-        sr_sap_statusH_df_1.to_hdf("../CleanedRecords_csv/sap_historyData_p1.h5", index=False, key='data', mode='w')
-        sr_sap_statusH_df_2.to_hdf("../CleanedRecords_csv/sap_historyData_p2.h5", index=False, key='data', mode='w')
-        sr_sap_statusH_df_3.to_hdf("../CleanedRecords_csv/sap_historyData_p3.h5", index=False, key='data', mode='w')
-        sr_sap_statusH_df_4.to_hdf("../CleanedRecords_csv/sap_historyData_p4.h5", index=False, key='data', mode='w')
-        re_sap_statusH_df.to_hdf("../CleanedRecords_csv/sap_historyData_p5.h5", index=False, key='data', mode='w')
-        print(f"Export complete. T: {dt.now() - export_start}")
+            # Given that the SR dataframe is very large, it is split into four, so that it feeds four cleaning processes
+            splitting_start = dt.now()
+            print("Splitting the SR dataframe in the background...")
+            sr_rawData_df_1, sr_rawData_df_2, sr_rawData_df_3, sr_rawData_df_4, sr_rawData_cats_1, sr_rawData_cats_2, \
+                sr_rawData_cats_3, sr_rawData_cats_4 = df_splitter(sr_rawData_df)
+            print(f"SR dataframe split complete. T: {dt.now() - splitting_start}")
+            splitting_start = dt.now()
+            print("Splitting the SR SAP dataframe in the background...")
+            sr_sap_statusH_df_1 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_1)]
+            sr_sap_statusH_df_2 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_2)]
+            sr_sap_statusH_df_3 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_3)]
+            sr_sap_statusH_df_4 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_4)]
+            print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
 
-        # Perform transformation and loading
-        # Clean the data in multiple processes and make a WIP report
-        semaphore = multiprocessing.Semaphore(1)  # Semaphore with counter value of 1 for concurrent data upload
+            # Export raw data to HDF5
+            export_start = dt.now()
+            print("Exporting raw data to HDF5\n")
+            sr_rawData_df_1.to_hdf(rf"{SRC_FOLDER}wip_rawData_p1.h5", index=False, key='data', mode='w')
+            sr_rawData_df_2.to_hdf(rf"{SRC_FOLDER}wip_rawData_p2.h5", index=False, key='data', mode='w')
+            sr_rawData_df_3.to_hdf(rf"{SRC_FOLDER}wip_rawData_p3.h5", index=False, key='data', mode='w')
+            sr_rawData_df_4.to_hdf(rf"{SRC_FOLDER}wip_rawData_p4.h5", index=False, key='data', mode='w')
+            re_rawData_df.to_hdf(rf"{SRC_FOLDER}wip_rawData_p5.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_1.to_hdf(rf"{SRC_FOLDER}sap_historyData_p1.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_2.to_hdf(rf"{SRC_FOLDER}sap_historyData_p2.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_3.to_hdf(rf"{SRC_FOLDER}sap_historyData_p3.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_4.to_hdf(rf"{SRC_FOLDER}sap_historyData_p4.h5", index=False, key='data', mode='w')
+            re_sap_statusH_df.to_hdf(rf"{SRC_FOLDER}sap_historyData_p5.h5", index=False, key='data', mode='w')
+            print(f"Export complete. T: {dt.now() - export_start}")
 
-        # Import unshipped and shipped data from WIP table
-        unship_lastStatus_server_df, unship_lastStatus_rack_df = select_wip_maxStatus(conn_sbi)
-        ship_lastStatus_server_df, ship_lastStatus_rack_df = select_wip_maxStatus(conn_sbi, packed=True)
+            # Update the WIP semaphore
+            with open('semaphore.txt', 'w') as semaphore_file:
+                semaphore_file.write('1')
 
-        with multiprocessing.Manager() as manager:
-            unpacked_SNs = manager.list()
+        else:  # Perform transformation and loading
+            # Clean the data in multiple processes and make a WIP report
+            semaphore = multiprocessing.Semaphore(1)  # Semaphore with counter value of 1 for concurrent data upload
 
-            process_1_sr = multiprocessing.Process(target=assign_wip, args=(semaphore, True,
-                                                                            unship_lastStatus_server_df,
-                                                                            ship_lastStatus_server_df,
-                                                                            unpacked_SNs),
-                                                   name="SR_Pro_1")
+            # Import unshipped and shipped data from WIP table
+            unship_lastStatus_server_df, unship_lastStatus_rack_df = select_wip_maxStatus(conn_sbi)
+            ship_lastStatus_server_df, ship_lastStatus_rack_df = select_wip_maxStatus(conn_sbi, packed=True)
 
-            process_2_sr = multiprocessing.Process(target=assign_wip,  args=(semaphore,), name="SR_Pro_2")
-            process_3_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_3")
-            process_4_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_4")
+            with multiprocessing.Manager() as manager:
+                unpacked_SNs = manager.list()
 
-            process_re = multiprocessing.Process(target=assign_wip, args=(semaphore, False,
-                                                                          unship_lastStatus_rack_df,
-                                                                          ship_lastStatus_rack_df,
-                                                                          unpacked_SNs),
-                                                 name="RE_Pro")
+                process_1_sr = multiprocessing.Process(target=assign_wip, args=(semaphore, True,
+                                                                                unship_lastStatus_server_df,
+                                                                                ship_lastStatus_server_df,
+                                                                                unpacked_SNs),
+                                                       name="SR_Pro_1")
 
-            process_1_sr.start()
-            process_2_sr.start()
-            process_3_sr.start()
-            process_4_sr.start()
-            process_re.start()
+                process_2_sr = multiprocessing.Process(target=assign_wip,  args=(semaphore,), name="SR_Pro_2")
+                process_3_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_3")
+                process_4_sr = multiprocessing.Process(target=assign_wip, args=(semaphore,), name="SR_Pro_4")
 
-            process_1_sr.join()
-            process_2_sr.join()
-            process_3_sr.join()
-            process_4_sr.join()
-            process_re.join()
+                process_re = multiprocessing.Process(target=assign_wip, args=(semaphore, False,
+                                                                              unship_lastStatus_rack_df,
+                                                                              ship_lastStatus_rack_df,
+                                                                              unpacked_SNs),
+                                                     name="RE_Pro")
 
-            # Update order type and factory status NULL values
-            update_str_nulls(conn_sbi)
-            # Update shipment status flag (packed is last)
-            update_shipmentFlag(conn_sbi, unpacked_SNs)
+                process_1_sr.start()
+                process_2_sr.start()
+                process_3_sr.start()
+                process_4_sr.start()
+                process_re.start()
+
+                process_1_sr.join()
+                process_2_sr.join()
+                process_3_sr.join()
+                process_4_sr.join()
+                process_re.join()
+
+                # Update order type and factory status NULL values
+                update_str_nulls(conn_sbi)
+                # Update shipment status flag (packed is last)
+                update_shipmentFlag(conn_sbi, unpacked_SNs)
+
+            # Update the WIP semaphore
+            with open('semaphore.txt', 'w') as semaphore_file:
+                semaphore_file.write('0')
     except Exception as e:
         print(repr(e))
         LOGGER.error(Messages.GENERIC_ERROR.value, exc_info=True)
@@ -156,5 +166,6 @@ if __name__ == '__main__':
         conn_sbi.close()
         show_goodbye()
         print(f"Total program duration: {dt.now() - program_start}")
-        show_message(AlertType.SUCCESS)
-        sys.exit()
+        if program_semaphore == 1:
+            show_message(AlertType.SUCCESS)
+            sys.exit()
