@@ -53,7 +53,8 @@ async def initializer(connection_sbi):
 
 
 if __name__ == '__main__':
-    SRC_FOLDER = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
+    h5Files_folder = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
+    programSemaphore_path = rf"{Path(__file__).parent}{os.sep}semaphore.txt"
 
     print(f"WIP ANALYSIS\n"
           f"({dt.now()})\n\n_______________________________________________________________________________________")
@@ -65,7 +66,7 @@ if __name__ == '__main__':
         warnings.simplefilter("ignore")
 
         # Check the WIP semaphore
-        with open('semaphore.txt', 'r') as semaphore_file:
+        with open(programSemaphore_path, 'r') as semaphore_file:
             program_semaphore = int(semaphore_file.readline())
 
         if program_semaphore == 0:  # Perform raw data extraction
@@ -92,20 +93,20 @@ if __name__ == '__main__':
             # Export raw data to HDF5
             export_start = dt.now()
             print("Exporting raw data to HDF5\n")
-            sr_rawData_df_1.to_hdf(rf"{SRC_FOLDER}wip_rawData_p1.h5", index=False, key='data', mode='w')
-            sr_rawData_df_2.to_hdf(rf"{SRC_FOLDER}wip_rawData_p2.h5", index=False, key='data', mode='w')
-            sr_rawData_df_3.to_hdf(rf"{SRC_FOLDER}wip_rawData_p3.h5", index=False, key='data', mode='w')
-            sr_rawData_df_4.to_hdf(rf"{SRC_FOLDER}wip_rawData_p4.h5", index=False, key='data', mode='w')
-            re_rawData_df.to_hdf(rf"{SRC_FOLDER}wip_rawData_p5.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_1.to_hdf(rf"{SRC_FOLDER}sap_historyData_p1.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_2.to_hdf(rf"{SRC_FOLDER}sap_historyData_p2.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_3.to_hdf(rf"{SRC_FOLDER}sap_historyData_p3.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_4.to_hdf(rf"{SRC_FOLDER}sap_historyData_p4.h5", index=False, key='data', mode='w')
-            re_sap_statusH_df.to_hdf(rf"{SRC_FOLDER}sap_historyData_p5.h5", index=False, key='data', mode='w')
+            sr_rawData_df_1.to_hdf(rf"{h5Files_folder}wip_rawData_p1.h5", index=False, key='data', mode='w')
+            sr_rawData_df_2.to_hdf(rf"{h5Files_folder}wip_rawData_p2.h5", index=False, key='data', mode='w')
+            sr_rawData_df_3.to_hdf(rf"{h5Files_folder}wip_rawData_p3.h5", index=False, key='data', mode='w')
+            sr_rawData_df_4.to_hdf(rf"{h5Files_folder}wip_rawData_p4.h5", index=False, key='data', mode='w')
+            re_rawData_df.to_hdf(rf"{h5Files_folder}wip_rawData_p5.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_1.to_hdf(rf"{h5Files_folder}sap_historyData_p1.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_2.to_hdf(rf"{h5Files_folder}sap_historyData_p2.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_3.to_hdf(rf"{h5Files_folder}sap_historyData_p3.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_4.to_hdf(rf"{h5Files_folder}sap_historyData_p4.h5", index=False, key='data', mode='w')
+            re_sap_statusH_df.to_hdf(rf"{h5Files_folder}sap_historyData_p5.h5", index=False, key='data', mode='w')
             print(f"Export complete. T: {dt.now() - export_start}")
 
             # Update the WIP semaphore
-            with open('semaphore.txt', 'w') as semaphore_file:
+            with open(programSemaphore_path, 'w') as semaphore_file:
                 semaphore_file.write('1')
 
         else:  # Perform transformation and loading
@@ -153,7 +154,7 @@ if __name__ == '__main__':
                 update_shipmentFlag(conn_sbi, unpacked_SNs)
 
             # Update the WIP semaphore
-            with open('semaphore.txt', 'w') as semaphore_file:
+            with open(programSemaphore_path, 'w') as semaphore_file:
                 semaphore_file.write('0')
     except Exception as e:
         print(repr(e))
