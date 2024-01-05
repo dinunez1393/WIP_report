@@ -10,7 +10,7 @@ from pathlib import Path
 import os
 
 
-SCRIPT_ON_SERVER = True
+SCRIPT_ON_SERVER = False
 SRC_FOLDER = Path(__file__).parent
 ERRORS_LOG = rf"{SRC_FOLDER.parent}{os.sep}Logging{os.sep}errors.log"
 
@@ -39,7 +39,7 @@ def datetime_from_py_to_sql(py_datetime):
     return py_datetime.__str__()[:23]
 
 
-def logger_creator(logger_name, logger_type='ERROR', logFile_location=ERRORS_LOG, script_onServer=False):
+def logger_creator(logger_name, logger_type='ERROR', logFile_location=ERRORS_LOG, script_onServer=SCRIPT_ON_SERVER):
     """
     Function creates a logger object
     :param logger_name: the name assigned to the logger instance
