@@ -9,6 +9,8 @@ import asyncio
 import logging
 from datetime import datetime as dt
 import multiprocessing
+import os
+from pathlib import Path
 
 
 async def get_raw_data(async_pool_asbuilt, conn_sbi):
@@ -73,6 +75,7 @@ def assign_wip(semaphore, isServerLevel=True, unship_wip_data_df=None, ship_wip_
     :param ship_wip_data_df: additional data of shipped units that might need to update. This data comes from WIP table
     :param unpacked_SNs: list object with possible unpacked SNs
     """
+    source_folder = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
 
     # Process number
     if multiprocessing.current_process().name == "SR_Pro_1":
@@ -89,8 +92,8 @@ def assign_wip(semaphore, isServerLevel=True, unship_wip_data_df=None, ship_wip_
     # Import raw data
     import_start = dt.now()
     print(f"({pro_num}) Importing raw data\n")
-    rawData_df = pd.read_hdf(f"../CleanedRecords_csv/wip_rawData_p{pro_num}.h5", key='data')
-    sap_historicalStatus_df = pd.read_hdf(f"../CleanedRecords_csv/sap_historyData_p{pro_num}.h5", key='data')
+    rawData_df = pd.read_hdf(rf"{source_folder}wip_rawData_p{pro_num}.h5", key='data')
+    sap_historicalStatus_df = pd.read_hdf(rf"{source_folder}sap_historyData_p{pro_num}.h5", key='data')
     print(f"({pro_num}) Raw data import is complete. T: {dt.now() - import_start}")
 
     PARTITION_SIZE = 300_000

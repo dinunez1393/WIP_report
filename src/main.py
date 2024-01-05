@@ -53,9 +53,7 @@ async def initializer(connection_sbi):
 
 
 if __name__ == '__main__':
-    # Change Working Directory to the SRC Folder
-    SRC_FOLDER = Path(__file__).parent
-    os.chdir(SRC_FOLDER)
+    SRC_FOLDER = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
 
     print(f"WIP ANALYSIS\n"
           f"({dt.now()})\n\n_______________________________________________________________________________________")
@@ -94,16 +92,16 @@ if __name__ == '__main__':
             # Export raw data to HDF5
             export_start = dt.now()
             print("Exporting raw data to HDF5\n")
-            sr_rawData_df_1.to_hdf("../CleanedRecords_csv/wip_rawData_p1.h5", index=False, key='data', mode='w')
-            sr_rawData_df_2.to_hdf("../CleanedRecords_csv/wip_rawData_p2.h5", index=False, key='data', mode='w')
-            sr_rawData_df_3.to_hdf("../CleanedRecords_csv/wip_rawData_p3.h5", index=False, key='data', mode='w')
-            sr_rawData_df_4.to_hdf("../CleanedRecords_csv/wip_rawData_p4.h5", index=False, key='data', mode='w')
-            re_rawData_df.to_hdf("../CleanedRecords_csv/wip_rawData_p5.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_1.to_hdf("../CleanedRecords_csv/sap_historyData_p1.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_2.to_hdf("../CleanedRecords_csv/sap_historyData_p2.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_3.to_hdf("../CleanedRecords_csv/sap_historyData_p3.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_4.to_hdf("../CleanedRecords_csv/sap_historyData_p4.h5", index=False, key='data', mode='w')
-            re_sap_statusH_df.to_hdf("../CleanedRecords_csv/sap_historyData_p5.h5", index=False, key='data', mode='w')
+            sr_rawData_df_1.to_hdf(rf"{SRC_FOLDER}wip_rawData_p1.h5", index=False, key='data', mode='w')
+            sr_rawData_df_2.to_hdf(rf"{SRC_FOLDER}wip_rawData_p2.h5", index=False, key='data', mode='w')
+            sr_rawData_df_3.to_hdf(rf"{SRC_FOLDER}wip_rawData_p3.h5", index=False, key='data', mode='w')
+            sr_rawData_df_4.to_hdf(rf"{SRC_FOLDER}wip_rawData_p4.h5", index=False, key='data', mode='w')
+            re_rawData_df.to_hdf(rf"{SRC_FOLDER}wip_rawData_p5.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_1.to_hdf(rf"{SRC_FOLDER}sap_historyData_p1.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_2.to_hdf(rf"{SRC_FOLDER}sap_historyData_p2.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_3.to_hdf(rf"{SRC_FOLDER}sap_historyData_p3.h5", index=False, key='data', mode='w')
+            sr_sap_statusH_df_4.to_hdf(rf"{SRC_FOLDER}sap_historyData_p4.h5", index=False, key='data', mode='w')
+            re_sap_statusH_df.to_hdf(rf"{SRC_FOLDER}sap_historyData_p5.h5", index=False, key='data', mode='w')
             print(f"Export complete. T: {dt.now() - export_start}")
 
             # Update the WIP semaphore
