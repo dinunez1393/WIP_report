@@ -9,6 +9,7 @@ from utilities import *
 from db_conn import make_connection
 import sys
 
+
 CHUNK_SIZE = 1_000
 LOGGER = logger_creator('INSERT_Error')
 
