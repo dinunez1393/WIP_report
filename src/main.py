@@ -13,7 +13,7 @@ import asyncio
 import multiprocessing
 import sys
 import os
-import extern_vars
+import json
 from pathlib import Path
 
 
@@ -55,7 +55,7 @@ async def initializer(connection_sbi):
 
 if __name__ == '__main__':
     h5Files_folder = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
-    programSemaphore_path = rf"{Path(__file__).parent}{os.sep}semaphore.txt"
+    programMetaData_path = rf"{Path(__file__).parent}{os.sep}meta_data.json"
 
     print(f"WIP ANALYSIS\n"
           f"({dt.now()})\n\n_______________________________________________________________________________________")
@@ -67,8 +67,9 @@ if __name__ == '__main__':
         warnings.simplefilter("ignore")
 
         # Check the WIP semaphore
-        with open(programSemaphore_path, 'r') as semaphore_file:
-            program_semaphore = int(semaphore_file.readline())
+        with open(programMetaData_path, 'r') as meta_data_file:
+            meta_data = json.load(meta_data_file)
+            program_semaphore = meta_data['program_semaphore']
 
         if program_semaphore == 0:  # Perform raw data extraction
             # Clear WIP table old records
@@ -107,9 +108,12 @@ if __name__ == '__main__':
             print(f"Export complete. T: {dt.now() - export_start}")
 
             # Update the WIP semaphore
-            with open(programSemaphore_path, 'w') as semaphore_file:
-                semaphore_file.write('1')
+            with open(programMetaData_path, 'w') as meta_data_file:
+                meta_data['program_semaphore'] = 1
+                json.dump(meta_data, meta_data_file)
 
+            # Close all DB connections
+            conn_sbi.close()
         else:  # Perform transformation and loading
             # Clean the data in multiple processes and make a WIP report
             semaphore = multiprocessing.Semaphore(1)  # Semaphore with counter value of 1 for concurrent data upload
@@ -155,18 +159,29 @@ if __name__ == '__main__':
                 update_shipmentFlag(conn_sbi, unpacked_SNs)
 
             # Update the WIP semaphore
-            with open(programSemaphore_path, 'w') as semaphore_file:
-                semaphore_file.write('0')
+            with open(programMetaData_path, 'w') as meta_data_file:
+                meta_data['program_semaphore'] = 0
+                json.dump(meta_data, meta_data_file)
+
+            # Close all DB connections
+            conn_sbi.close()
     except Exception as e:
         print(repr(e))
         LOGGER.error(Messages.GENERIC_ERROR.value, exc_info=True)
-        extern_vars.success_flag = 0
         show_message(AlertType.FAILED)
+
+        # Update program success flag for failure
+        with open(programMetaData_path, 'w') as meta_data_file:
+            meta_data['program_success'] = 0
+            json.dump(meta_data, meta_data_file)
+
         sys.exit()
     else:
         print("DB Connection ran successfully\n")
-        # Close all DB connections
-        conn_sbi.close()
         show_goodbye()
         print(f"Program duration: {dt.now() - program_start}")
-        extern_vars.success_flag = 1
+
+        # Update program success flag
+        with open(programMetaData_path, 'w') as meta_data_file:
+            meta_data['program_success'] = 1
+            json.dump(meta_data, meta_data_file)
