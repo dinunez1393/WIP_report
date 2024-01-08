@@ -160,6 +160,7 @@ class UnitHistory:
                     if len(day_ckps_df['TransactionDate']) < 1:
                         current_date = current_date + timedelta(days=1)
                         continue
+
                     # Get the row that has the current location of this current instance
                     location_row = day_ckps_df.iloc[0].copy()
 
