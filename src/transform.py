@@ -10,6 +10,7 @@ import logging
 from datetime import datetime as dt
 import multiprocessing
 import os
+import pyarrow.parquet as pq
 from pathlib import Path
 
 
@@ -92,8 +93,11 @@ def assign_wip(semaphore, isServerLevel=True, unship_wip_data_df=None, ship_wip_
     # Import raw data
     import_start = dt.now()
     print(f"({pro_num}) Importing raw data\n")
-    rawData_df = pd.read_hdf(rf"{source_folder}wip_rawData_p{pro_num}.h5", key='data')
-    sap_historicalStatus_df = pd.read_hdf(rf"{source_folder}sap_historyData_p{pro_num}.h5", key='data')
+    rawData = pq.read_table(rf"{source_folder}wip_rawData_p{pro_num}.parquet")
+    sap_historicalStatus = pq.read_table(rf"{source_folder}sap_historyData_p{pro_num}.parquet")
+
+    rawData_df = rawData.to_pandas()
+    sap_historicalStatus_df = sap_historicalStatus.to_pandas()
     print(f"({pro_num}) Raw data import is complete. T: {dt.now() - import_start}")
 
     PARTITION_SIZE = 300_000

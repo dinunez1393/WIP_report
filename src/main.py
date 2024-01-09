@@ -14,6 +14,8 @@ import multiprocessing
 import sys
 import os
 import json
+import pyarrow as pa
+import pyarrow.parquet as pq
 from pathlib import Path
 
 
@@ -54,7 +56,7 @@ async def initializer(connection_sbi):
 
 
 if __name__ == '__main__':
-    h5Files_folder = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
+    pqFiles_folder = rf"{Path(__file__).parent.parent}{os.sep}CleanedRecords_csv{os.sep}"
     programMetaData_path = rf"{Path(__file__).parent}{os.sep}meta_data.json"
 
     print(f"WIP ANALYSIS\n"
@@ -92,19 +94,31 @@ if __name__ == '__main__':
             sr_sap_statusH_df_4 = sr_sap_statusH_df[sr_sap_statusH_df['SerialNumber'].isin(sr_rawData_cats_4)]
             print(f"SR SAP dataframe split complete. T: {dt.now() - splitting_start}\n")
 
-            # Export raw data to HDF5
+            # Export raw data to PARQUET
             export_start = dt.now()
-            print("Exporting raw data to HDF5\n")
-            sr_rawData_df_1.to_hdf(rf"{h5Files_folder}wip_rawData_p1.h5", index=False, key='data', mode='w')
-            sr_rawData_df_2.to_hdf(rf"{h5Files_folder}wip_rawData_p2.h5", index=False, key='data', mode='w')
-            sr_rawData_df_3.to_hdf(rf"{h5Files_folder}wip_rawData_p3.h5", index=False, key='data', mode='w')
-            sr_rawData_df_4.to_hdf(rf"{h5Files_folder}wip_rawData_p4.h5", index=False, key='data', mode='w')
-            re_rawData_df.to_hdf(rf"{h5Files_folder}wip_rawData_p5.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_1.to_hdf(rf"{h5Files_folder}sap_historyData_p1.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_2.to_hdf(rf"{h5Files_folder}sap_historyData_p2.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_3.to_hdf(rf"{h5Files_folder}sap_historyData_p3.h5", index=False, key='data', mode='w')
-            sr_sap_statusH_df_4.to_hdf(rf"{h5Files_folder}sap_historyData_p4.h5", index=False, key='data', mode='w')
-            re_sap_statusH_df.to_hdf(rf"{h5Files_folder}sap_historyData_p5.h5", index=False, key='data', mode='w')
+            print("Exporting raw data to PARQUET\n")
+
+            srRaw_table1 = pa.Table.from_pandas(sr_rawData_df_1)
+            srRaw_table2 = pa.Table.from_pandas(sr_rawData_df_2)
+            srRaw_table3 = pa.Table.from_pandas(sr_rawData_df_3)
+            srRaw_table4 = pa.Table.from_pandas(sr_rawData_df_4)
+            reRaw_table = pa.Table.from_pandas(re_rawData_df)
+            sr_sap_table1 = pa.Table.from_pandas(sr_sap_statusH_df_1)
+            sr_sap_table2 = pa.Table.from_pandas(sr_sap_statusH_df_2)
+            sr_sap_table3 = pa.Table.from_pandas(sr_sap_statusH_df_3)
+            sr_sap_table4 = pa.Table.from_pandas(sr_sap_statusH_df_4)
+            re_sap_table = pa.Table.from_pandas(re_sap_statusH_df)
+
+            pq.write_table(srRaw_table1, rf"{pqFiles_folder}wip_rawData_p1.parquet")
+            pq.write_table(srRaw_table2, rf"{pqFiles_folder}wip_rawData_p2.parquet")
+            pq.write_table(srRaw_table3, rf"{pqFiles_folder}wip_rawData_p3.parquet")
+            pq.write_table(srRaw_table4, rf"{pqFiles_folder}wip_rawData_p4.parquet")
+            pq.write_table(reRaw_table, rf"{pqFiles_folder}wip_rawData_p5.parquet")
+            pq.write_table(sr_sap_table1, rf"{pqFiles_folder}sap_historyData_p1.parquet")
+            pq.write_table(sr_sap_table2, rf"{pqFiles_folder}sap_historyData_p2.parquet")
+            pq.write_table(sr_sap_table3, rf"{pqFiles_folder}sap_historyData_p3.parquet")
+            pq.write_table(sr_sap_table4, rf"{pqFiles_folder}sap_historyData_p4.parquet")
+            pq.write_table(re_sap_table, rf"{pqFiles_folder}sap_historyData_p5.parquet")
             print(f"Export complete. T: {dt.now() - export_start}")
 
             # Update the WIP semaphore
